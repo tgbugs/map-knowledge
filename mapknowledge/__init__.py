@@ -26,31 +26,18 @@ from pathlib import Path
 
 #===============================================================================
 
-from mapmaker.settings import settings
-from mapmaker.utils import log
-
 from .scicrunch import APINATOMY_MODEL_PREFIX, CONNECTIVITY_ONTOLOGIES
 from .scicrunch import SciCrunch
+from .utils import log
 
 #===============================================================================
 
 KNOWLEDGE_BASE = 'knowledgebase.db'
 
-LABELS_DB = 'labels.sqlite'
-
 #===============================================================================
 
 KNOWLEDGE_SCHEMA = """
     begin;
-    -- will auto convert datetime.datetime objects
-    create table flatmaps(id text primary key, models text, created timestamp);
-    create unique index flatmaps_index on flatmaps(id);
-    create index flatmaps_models_index on flatmaps(models);
-
-    create table flatmap_entities (flatmap text, entity text);
-    create index flatmap_entities_flatmap_index on flatmap_entities(flatmap);
-    create index flatmap_entities_entity_index on flatmap_entities(entity);
-
     create table knowledge (entity text primary key, knowledge text);
     create unique index knowledge_index on knowledge(entity);
 
@@ -72,11 +59,6 @@ class KnowledgeBase(object):
             db = sqlite3.connect(self.__db_name,
                 detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
             db.executescript(KNOWLEDGE_SCHEMA)
-            labels_db = Path(store_directory, LABELS_DB).resolve()
-            if labels_db.exists():
-                with db:
-                    db.executemany('insert into labels(entity, label) values (?, ?)',
-                        sqlite3.connect(labels_db).execute('select entity, label from labels').fetchall())
             db.close()
         db_uri = '{}?mode=ro'.format(self.__db_name.as_uri()) if read_only else self.__db_name.as_uri()
         self.__db = sqlite3.connect(db_uri, uri=True,
@@ -96,37 +78,17 @@ class KnowledgeBase(object):
 #===============================================================================
 
 class KnowledgeStore(KnowledgeBase):
-    def __init__(self, store_directory, knowledge_base=KNOWLEDGE_BASE):
+    def __init__(self, store_directory, knowledge_base=KNOWLEDGE_BASE, clean_connectivity=False):
         super().__init__(store_directory, create=True, knowledge_base=knowledge_base)
+        self.__clean_connectivity = clean_connectivity
         self.__entity_knowledge = {}     # Cache lookups
         self.__scicrunch = SciCrunch()
         self.__refreshed = []
 
-    def add_flatmap(self, flatmap):
-    #==============================
-        self.db.execute('begin')
-        self.db.execute('replace into flatmaps(id, models, created) values (?, ?, ?)',
-            (flatmap.id, flatmap.models, flatmap.created))
-        self.db.execute('delete from flatmap_entities where flatmap=?', (flatmap.id, ))
-        self.db.executemany('insert into flatmap_entities(flatmap, entity) values (?, ?)',
-            ((flatmap.id, entity) for entity in flatmap.entities))
-        self.db.commit()
-
-    def flatmap_entities(self, flatmap):
-    #===================================
-        select = ['select distinct entity from flatmap_entities']
-        if flatmap is not None:
-            select.append('where flatmap=?')
-        select.append('order by entity')
-        if flatmap is not None:
-            return [row[0] for row in self.db.execute(' '.join(select), (flatmap,))]
-        else:
-            return [row[0] for row in self.db.execute(' '.join(select))]
-
     def entity_knowledge(self, entity):
     #==================================
         # Optionally refresh local connectivity knowledge from SciCrunch
-        if (settings.get('cleanConnectivity', False)
+        if (self.__clean_connectivity
          and (entity.startswith(APINATOMY_MODEL_PREFIX)
            or entity.split(':')[0] in CONNECTIVITY_ONTOLOGIES)
          and entity not in self.__refreshed):
@@ -154,7 +116,7 @@ class KnowledgeStore(KnowledgeBase):
                 if 'label' in knowledge:
                     self.db.execute('replace into labels values (?, ?)', (entity, knowledge['label']))
                 if 'publications' in knowledge:
-                    self.update_publications(entity, knowledge.pop('publications', []))
+                    self.update_publications(entity, knowledge.get('publications', []))
                 self.db.commit()
         # Use the entity's value as its label if none is defined
         if 'label' not in knowledge:
@@ -177,14 +139,6 @@ class KnowledgeStore(KnowledgeBase):
             self.db.execute('delete from publications where entity = ?', (entity, ))
             self.db.executemany('insert into publications(entity, publication) values (?, ?)',
                 ((entity, publication) for publication in publications))
-
-#===============================================================================
-
-def get_knowledge(entity):
-    return settings['KNOWLEDGE_STORE'].entity_knowledge(entity)
-
-def update_publications(entity, publications):
-    settings['KNOWLEDGE_STORE'].update_publications(entity, publications)
 
 #===============================================================================
 

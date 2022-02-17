@@ -22,9 +22,9 @@ import os
 
 #===============================================================================
 
-from mapmaker.utils import log, request_json
-
 from .apinatomy import Apinatomy
+from .utils import log
+from .utils import request_json
 
 #===============================================================================
 
@@ -66,7 +66,7 @@ class SciCrunch(object):
         self.__unknown_entities = []
         self.__scigraph_key = os.environ.get('SCICRUNCH_API_KEY')
         if self.__scigraph_key is None:
-            log.warn('Undefined SCICRUNCH_API_KEY: SciCrunch knowledge will not be looked up')
+            log.warning('Undefined SCICRUNCH_API_KEY: SciCrunch knowledge will not be looked up')
 
     def get_knowledge(self, entity):
         knowledge = {}
@@ -98,7 +98,7 @@ class SciCrunch(object):
                 if data is not None:
                     knowledge = Apinatomy.model_knowledge(entity, data)
         if len(knowledge) == 0 and entity not in self.__unknown_entities:
-            log.warn('Unknown anatomical entity: {}'.format(entity))
+            log.warning('Unknown anatomical entity: {}'.format(entity))
             self.__unknown_entities.append(entity)
         return knowledge
 
