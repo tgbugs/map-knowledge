@@ -34,7 +34,7 @@ LOOKUP_TIMEOUT = 30    # seconds; for `requests.get()`
 def request_json(endpoint, **kwds):
     try:
         response = requests.get(endpoint,
-                                headers={'accept': 'application/json'},
+                                headers={'Accept': 'application/json'},
                                 timeout=LOOKUP_TIMEOUT,
                                 **kwds)
         if response.status_code == requests.codes.ok:
