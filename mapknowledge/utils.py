@@ -24,7 +24,7 @@ except ImportError:
 
 #===============================================================================
 
-from json.decoder import JSONDecodeError
+from json import JSONDecodeError
 import requests
 
 LOOKUP_TIMEOUT = 30    # seconds; for `requests.get()`
@@ -40,7 +40,7 @@ def request_json(endpoint, **kwds):
         if response.status_code == requests.codes.ok:
             try:
                 return response.json()
-            except json.JSONDecodeError:
+            except JSONDecodeError:
                 error = 'invalid JSON returned'
         else:
             error = 'status: {}'.format(response.status_code)
