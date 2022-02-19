@@ -27,7 +27,7 @@ except ImportError:
 from json.decoder import JSONDecodeError
 import requests
 
-LOOKUP_TIMEOUT = 5    # seconds; for `requests.get()`
+LOOKUP_TIMEOUT = 30    # seconds; for `requests.get()`
 
 #===============================================================================
 
