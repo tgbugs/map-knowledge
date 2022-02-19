@@ -201,7 +201,7 @@ class Apinatomy:
     lyphs = 'apinatomy:lyphs'
     next = 'apinatomy:next'
     next_s = 'apinatomy:next*'
-    publications = 'apinatomy:publications'
+    references = 'apinatomy:references'
     topology_s = 'apinatomy:topology*'
 
     @staticmethod
@@ -408,11 +408,11 @@ class Apinatomy:
                 apinatomy_neuron = nifstd.obj(edge)
                 break
         if apinatomy_neuron is not None:
-            publications = []
+            references = []
             for edge in data['edges']:
-                if nifstd.sub(edge, apinatomy_neuron) and nifstd.pred(edge, Apinatomy.publications):
-                    publications.append(nifstd.obj(edge))
-            knowledge['publications'] = publications
+                if nifstd.sub(edge, apinatomy_neuron) and nifstd.pred(edge, Apinatomy.references):
+                    references.append(nifstd.obj(edge))
+            knowledge['references'] = references
         knowledge['connectivity'] = Apinatomy.parse_connectivity(data)
         return knowledge
 

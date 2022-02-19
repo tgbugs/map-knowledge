@@ -116,11 +116,11 @@ class KnowledgeStore(KnowledgeBase):
                     self.db.execute('begin')
                 # Save knowledge in our database
                 self.db.execute('replace into knowledge values (?, ?)', (entity, json.dumps(knowledge)))
-                # Save label and publications in their own tables
+                # Save label and references in their own tables
                 if 'label' in knowledge:
                     self.db.execute('replace into labels values (?, ?)', (entity, knowledge['label']))
-                if 'publications' in knowledge:
-                    self.update_publications(entity, knowledge.get('publications', []))
+                if 'references' in knowledge:
+                    self.update_references(entity, knowledge.get('references', []))
                 self.db.commit()
         # Use the entity's value as its label if none is defined
         if 'label' not in knowledge:
@@ -137,12 +137,12 @@ class KnowledgeStore(KnowledgeBase):
         knowledge = self.entity_knowledge(entity)
         return knowledge['label']
 
-    def update_publications(self, entity, publications):
-    #===================================================
+    def update_references(self, entity, references):
+    #===============================================
         with self.db:
             self.db.execute('delete from publications where entity = ?', (entity, ))
             self.db.executemany('insert into publications(entity, publication) values (?, ?)',
-                ((entity, publication) for publication in publications))
+                ((entity, reference) for reference in references))
 
 #===============================================================================
 
