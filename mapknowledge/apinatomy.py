@@ -192,7 +192,7 @@ class Apinatomy:
     annotates = 'apinatomy:annotates'
     cloneOf = 'apinatomy:cloneOf'
     endsIn = 'apinatomy:endsIn'
-    external = 'apinatomy:external'
+    ontologyTerms = 'apinatomy:ontologyTerms'
     fasciculatesIn = 'apinatomy:fasciculatesIn'
     inheritedExternal = 'apinatomy:inheritedExternal'
     inheritedExternal_s = 'apinatomy:inheritedExternal*'
@@ -272,9 +272,9 @@ class Apinatomy:
         sos = set(sov for e in blob['edges'] for sov in (e['sub'], e['obj']))
         blob['nodes'] = [n for n in blob['nodes'] if n['id'] in sos]
         somas = [e for e in edges if e['pred'] == Apinatomy.internalIn]
-        externals = [e for e in edges if e['pred'] == Apinatomy.external]
+        terms = [e for e in edges if e['pred'] == Apinatomy.ontologyTerms]
         ordering_edges = [e for e in edges if e['pred'] == Apinatomy.next]
-        return blob, edges, somas, externals, ordering_edges
+        return blob, edges, somas, terms, ordering_edges
 
     @staticmethod
     def isLayer(blob, match):
@@ -295,7 +295,7 @@ class Apinatomy:
             if nifstd.sub(e, m):
                 if nifstd.pred(e, Apinatomy.cloneOf):  # should be zapped during simplify
                     return nifstd.ematch(blob, select_ext, nifstd.obj(e))
-                if (nifstd.pred(e, Apinatomy.external)
+                if (nifstd.pred(e, Apinatomy.ontologyTerms)
                  or nifstd.pred(e, Apinatomy.inheritedExternal)
                  or nifstd.pred(e, Apinatomy.inheritedExternal_s)):
                     external = nifstd.obj(e)
@@ -338,7 +338,7 @@ class Apinatomy:
                                     and Apinatomy.isLayer(blob, m)
                                     and (nifstd.pred(e, Apinatomy.inheritedExternal)
                                       or nifstd.pred(e, Apinatomy.inheritedExternal_s)
-                                      or nifstd.pred(e, Apinatomy.external))),
+                                      or nifstd.pred(e, Apinatomy.ontologyTerms))),
                              d)]
         lregs = []
         if layers:
@@ -350,14 +350,14 @@ class Apinatomy:
                      nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
                                        and not Apinatomy.isLayer(blob, m)
                                        and (nifstd.pred(e, Apinatomy.inheritedExternal)
-                                         or nifstd.pred(e, Apinatomy.external))),
+                                         or nifstd.pred(e, Apinatomy.ontologyTerms))),
                                 d)]
         regions = [nifstd.obj(t) for d in direct for t in
                    nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
                                      and not Apinatomy.isLayer(blob, m)
                                      and (nifstd.pred(e, Apinatomy.inheritedExternal)
                                        or nifstd.pred(e, Apinatomy.inheritedExternal_s)
-                                       or nifstd.pred(e, Apinatomy.external))),
+                                       or nifstd.pred(e, Apinatomy.ontologyTerms))),
                               d)]
 
         lrs = Apinatomy.reclr(blob, start)
