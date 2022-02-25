@@ -30,7 +30,7 @@ from pathlib import Path
 
 #===============================================================================
 
-from .scicrunch import APINATOMY_MODEL_PREFIX, CONNECTIVITY_ONTOLOGIES
+from .scicrunch import APINATOMY_MODEL_PREFIX, CONNECTIVITY_ONTOLOGIES, SCICRUNCH_API_ENDPOINT
 from .scicrunch import SciCrunch
 from .utils import log
 
@@ -82,11 +82,14 @@ class KnowledgeBase(object):
 #===============================================================================
 
 class KnowledgeStore(KnowledgeBase):
-    def __init__(self, store_directory, knowledge_base=KNOWLEDGE_BASE, clean_connectivity=False):
+    def __init__(self, store_directory,
+                       knowledge_base=KNOWLEDGE_BASE,
+                       clean_connectivity=False,
+                       scicrunch_api=SCICRUNCH_API_ENDPOINT):
         super().__init__(store_directory, create=True, knowledge_base=knowledge_base)
         self.__clean_connectivity = clean_connectivity
         self.__entity_knowledge = {}     # Cache lookups
-        self.__scicrunch = SciCrunch()
+        self.__scicrunch = SciCrunch(scicrunch_api)
         self.__refreshed = []
 
     def entity_knowledge(self, entity):
