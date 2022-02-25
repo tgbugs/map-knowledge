@@ -109,6 +109,8 @@ class KnowledgeStore(KnowledgeBase):
          and entity not in self.__refreshed):
             log.info(f'Refreshing knowledge for {entity}')
             self.db.execute('delete from knowledge where entity=?', (entity,))
+            self.db.execute('delete from labels where entity=?', (entity,))
+            self.db.execute('delete from publications where entity=?', (entity,))
             self.__refreshed.append(entity)
         else:
             # Check local cache
