@@ -58,15 +58,20 @@ KNOWLEDGE_SCHEMA = """
 
 class KnowledgeBase(object):
     def __init__(self, store_directory, read_only=False, create=False, knowledge_base=KNOWLEDGE_BASE):
-        self.__db_name = Path(store_directory, knowledge_base).resolve()
-        if create and not self.__db_name.exists():
-            db = sqlite3.connect(self.__db_name,
+        if store_directory is None:
+            self.__db_name = None
+            self.__db = None
+        else:
+            self.__db_name = Path(store_directory, knowledge_base).resolve()
+            if create and not self.__db_name.exists():
+                db = sqlite3.connect(self.__db_name,
+                    detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+                db.executescript(KNOWLEDGE_SCHEMA)
+                db.close()
+            ## What about upgrading when tables (e.g. knowledge) don't exist???
+            db_uri = '{}?mode=ro'.format(self.__db_name.as_uri()) if read_only else self.__db_name.as_uri()
+            self.__db = sqlite3.connect(db_uri, uri=True,
                 detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
-            db.executescript(KNOWLEDGE_SCHEMA)
-            db.close()
-        db_uri = '{}?mode=ro'.format(self.__db_name.as_uri()) if read_only else self.__db_name.as_uri()
-        self.__db = sqlite3.connect(db_uri, uri=True,
-            detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
 
     @property
     def db(self):
@@ -77,16 +82,18 @@ class KnowledgeBase(object):
         return self.__db_name
 
     def close(self):
-        self.__db.close()
+        if self.__db is not None:
+            self.__db.close()
 
 #===============================================================================
 
 class KnowledgeStore(KnowledgeBase):
-    def __init__(self, store_directory,
+    def __init__(self, store_directory=None,
                        knowledge_base=KNOWLEDGE_BASE,
                        clean_connectivity=False,
                        scicrunch_api=SCICRUNCH_API_ENDPOINT):
         super().__init__(store_directory, create=True, knowledge_base=knowledge_base)
+        self.__knowledge_base = (store_directory is not None)
         self.__clean_connectivity = clean_connectivity
         self.__entity_knowledge = {}     # Cache lookups
         self.__scicrunch = SciCrunch(scicrunch_api)
@@ -95,7 +102,8 @@ class KnowledgeStore(KnowledgeBase):
     def entity_knowledge(self, entity):
     #==================================
         # Optionally refresh local connectivity knowledge from SciCrunch
-        if (self.__clean_connectivity
+        if (self.__knowledge_base
+         and self.__clean_connectivity
          and (entity.startswith(APINATOMY_MODEL_PREFIX)
            or entity.split(':')[0] in CONNECTIVITY_ONTOLOGIES)
          and entity not in self.__refreshed):
@@ -107,14 +115,16 @@ class KnowledgeStore(KnowledgeBase):
             knowledge = self.__entity_knowledge.get(entity, {})
             if len(knowledge): return knowledge
 
-        # Now check our database
-        row = self.db.execute('select knowledge from knowledge where entity=?', (entity,)).fetchone()
-        if row is not None:
-            knowledge = json.loads(row[0])
-        else:
+        knowledge = {}
+        if self.__knowledge_base:
+            # Check our database
+            row = self.db.execute('select knowledge from knowledge where entity=?', (entity,)).fetchone()
+            if row is not None:
+                knowledge = json.loads(row[0])
+        if len(knowledge) == 0:
             # Consult SciCrunch if we don't know about the entity
             knowledge = self.__scicrunch.get_knowledge(entity)
-            if len(knowledge) > 0:
+            if len(knowledge) > 0 and self.__knowledge_base:
                 if not self.db.in_transaction:
                     self.db.execute('begin')
                 # Save knowledge in our database
@@ -125,6 +135,7 @@ class KnowledgeStore(KnowledgeBase):
                 if 'references' in knowledge:
                     self.update_references(entity, knowledge.get('references', []))
                 self.db.commit()
+
         # Use the entity's value as its label if none is defined
         if 'label' not in knowledge:
             knowledge['label'] = entity
