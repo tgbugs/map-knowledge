@@ -147,18 +147,20 @@ class KnowledgeStore(KnowledgeBase):
 
     def label(self, entity):
     #=======================
-        row = self.db.execute('select label from labels where entity=?', (entity,)).fetchone()
-        if row is not None:
-            return row[0]
+        if self.__knowledge_base:
+            row = self.db.execute('select label from labels where entity=?', (entity,)).fetchone()
+            if row is not None:
+                return row[0]
         knowledge = self.entity_knowledge(entity)
         return knowledge['label']
 
     def update_references(self, entity, references):
     #===============================================
-        with self.db:
-            self.db.execute('delete from publications where entity = ?', (entity, ))
-            self.db.executemany('insert into publications(entity, publication) values (?, ?)',
-                ((entity, reference) for reference in references))
+        if self.__knowledge_base:
+            with self.db:
+                self.db.execute('delete from publications where entity = ?', (entity, ))
+                self.db.executemany('insert into publications(entity, publication) values (?, ?)',
+                    ((entity, reference) for reference in references))
 
 #===============================================================================
 
