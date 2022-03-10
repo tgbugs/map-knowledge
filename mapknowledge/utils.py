@@ -41,12 +41,12 @@ def request_json(endpoint, **kwds):
             try:
                 return response.json()
             except JSONDecodeError:
-                error = 'invalid JSON returned'
+                error = 'Invalid JSON returned'
         else:
-            error = 'status: {}'.format(response.status_code)
+            error = response.reason
     except requests.exceptions.RequestException as exception:
-        error = 'exception: {}'.format(exception)
-    log.warning("Couldn't access {}: {}".format(endpoint, error))
+        error = f'Exception: {exception}'
+    log.warning(f"Couldn't access {endpoint}: {error}")
     return None
 
 #===============================================================================
