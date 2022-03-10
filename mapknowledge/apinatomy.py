@@ -216,6 +216,13 @@ class Apinatomy:
         """.format(MODEL_ID=model_id)
 
     @staticmethod
+    def phenotype_for_neuron_cypher(neuron_id):
+        # From https://github.com/SciCrunch/sparc-curation/blob/master/docs/queries.org#phenotypes-for-neuron
+        return """
+            MATCH (neupop:Class{{iri: "{NEURON_ID}"}})-[e:ilxtr:hasPhenotype!]->(phenotype) RETURN e
+        """.format(NEURON_ID=neuron_id)
+
+    @staticmethod
     def deblob(blob, remove_converge=False):
         # FIXME I think we may be over or under simplifying just a bit
         # somehow getting double links at the end of the chain
@@ -429,9 +436,17 @@ class Apinatomy:
                 path_id = node['id']
                 knowledge['paths'].append({
                     'id': path_id,
-                    'models': path_id,
-                    # 'type': ???? <<<<<<<<<<<<<<<<<<<<<<<<<<
+                    'models': path_id
                 })
         return knowledge
+
+    @staticmethod
+    def phenotypes(data):
+    #====================
+        phenotypes = []
+        for edge in data['edges']:
+            if edge.get('pred') == 'ilxtr:hasPhenotype':
+                phenotypes.append(edge.get('obj'))
+        return phenotypes
 
 #===============================================================================

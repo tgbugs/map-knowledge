@@ -54,6 +54,27 @@ SCICRUNCH_CONNECTIVITY_NEURONS = f'{SCICRUNCH_SPARC_APINATOMY}/neru-5/{{NEURON_I
 
 #===============================================================================
 
+class NAMESPACES:
+    namespaces = {
+        'ilxtr': 'http://uri.interlex.org/tgbugs/uris/readable/'
+    }
+
+    @staticmethod
+    def uri(curie: str) -> str:
+        parts = curie.split(':', 1)
+        if len(parts) == 2 and parts[0] in NAMESPACES.namespaces:
+            return NAMESPACES.namespaces[parts[0]] + parts[1]
+        return curie
+
+    @staticmethod
+    def curie(uri: str) -> str:
+        for prefix, ns_uri in NAMESPACES.namespaces.items():
+            if uri.startswith(ns_uri):
+                return f'{prefix}:{uri[len(ns_uri):]}'
+        return uri
+
+#===============================================================================
+
 class SciCrunch(object):
     def __init__(self, api_endpoint=SCICRUNCH_API_ENDPOINT):
         self.__api_endpoint = api_endpoint
@@ -62,7 +83,8 @@ class SciCrunch(object):
         if self.__scicrunch_key is None:
             log.warning('Undefined SCICRUNCH_API_KEY: SciCrunch knowledge will not be looked up')
 
-    def get_knowledge(self, entity):
+    def get_knowledge(self, entity: str) -> dict:
+    #============================================
         knowledge = {}
         if self.__scicrunch_key is not None:
             params = {
@@ -98,5 +120,23 @@ class SciCrunch(object):
             log.warning('Unknown anatomical entity: {}'.format(entity))
             self.__unknown_entities.append(entity)
         return knowledge
+
+    def get_phenotypes(self, entity: str) -> list:
+    #=============================================
+        phenotypes = None
+        if self.__scicrunch_key is not None:
+            params = {
+                'api_key': self.__scicrunch_key,
+                'limit': 9999,
+            }
+            params['cypherQuery'] = Apinatomy.phenotype_for_neuron_cypher(NAMESPACES.uri(entity))
+            data = request_json(SCICRUNCH_SPARC_CYPHER.format(API_ENDPOINT=self.__api_endpoint),
+                                params=params)
+            if data is not None:
+                phenotypes = Apinatomy.phenotypes(data)
+        if phenotypes is None and entity not in self.__unknown_entities:
+            log.warning('Unknown anatomical entity: {}'.format(entity))
+            self.__unknown_entities.append(entity)
+        return phenotypes
 
 #===============================================================================

@@ -99,6 +99,11 @@ class KnowledgeStore(KnowledgeBase):
         self.__scicrunch = SciCrunch(scicrunch_api)
         self.__refreshed = []
 
+
+    @property
+    def scicrunch(self):
+        return self.__scicrunch
+
     def entity_knowledge(self, entity):
     #==================================
         # Optionally refresh local connectivity knowledge from SciCrunch
@@ -126,6 +131,10 @@ class KnowledgeStore(KnowledgeBase):
         if len(knowledge) == 0:
             # Consult SciCrunch if we don't know about the entity
             knowledge = self.__scicrunch.get_knowledge(entity)
+            if 'connectivity' in knowledge:
+                phenotypes = self.__scicrunch.get_phenotypes(entity)
+                if len(phenotypes) > 0:
+                    knowledge['phenotypes'] = phenotypes
             if len(knowledge) > 0 and self.__knowledge_base:
                 if not self.db.in_transaction:
                     self.db.execute('begin')
