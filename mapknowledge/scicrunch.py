@@ -76,10 +76,10 @@ class NAMESPACES:
 #===============================================================================
 
 class SciCrunch(object):
-    def __init__(self, api_endpoint=SCICRUNCH_API_ENDPOINT):
+    def __init__(self, api_endpoint=SCICRUNCH_API_ENDPOINT, scicrunch_key=None):
         self.__api_endpoint = api_endpoint
         self.__unknown_entities = []
-        self.__scicrunch_key = os.environ.get('SCICRUNCH_API_KEY')
+        self.__scicrunch_key = scicrunch_key if scicrunch_key is not None else os.environ.get('SCICRUNCH_API_KEY')
         if self.__scicrunch_key is None:
             log.warning('Undefined SCICRUNCH_API_KEY: SciCrunch knowledge will not be looked up')
 

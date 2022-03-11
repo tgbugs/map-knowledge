@@ -91,12 +91,13 @@ class KnowledgeStore(KnowledgeBase):
     def __init__(self, store_directory=None,
                        knowledge_base=KNOWLEDGE_BASE,
                        clean_connectivity=False,
-                       scicrunch_api=SCICRUNCH_API_ENDPOINT):
+                       scicrunch_api=SCICRUNCH_API_ENDPOINT,
+                       scicrunch_key=None):
         super().__init__(store_directory, create=True, knowledge_base=knowledge_base)
         self.__knowledge_base = (store_directory is not None)
         self.__clean_connectivity = clean_connectivity
         self.__entity_knowledge = {}     # Cache lookups
-        self.__scicrunch = SciCrunch(scicrunch_api)
+        self.__scicrunch = SciCrunch(api_endpoint=scicrunch_api, scicrunch_key=scicrunch_key)
         self.__refreshed = []
 
 
