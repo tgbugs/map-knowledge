@@ -11,12 +11,20 @@ def print_knowledge(store, entity):
     pprint(store.entity_knowledge(entity))
     print()
 
+def print_phenotypes(store, entity):
+    print("Querying", entity)
+    knowledge = store.entity_knowledge(entity)
+    print(f'{entity}: {knowledge.get("phenotypes", [])}')
+
 if __name__ == '__main__':
     store = KnowledgeStore(store_directory='.')
 
     print_knowledge(store, KEAST_MODEL)
     for n in [1, 5, 9, 11]:
         print_knowledge(store, KEAST_NEURON(n))
+
+    for n in range(1, 21):
+        print_phenotypes(store, KEAST_NEURON(n))
 
     print_knowledge(store, 'CL:0000540')
     print_knowledge(store, 'EMAPA:31526')
