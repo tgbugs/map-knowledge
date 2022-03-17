@@ -33,6 +33,10 @@ from rdflib.extras import external_graph_libs as egl
 
 #===============================================================================
 
+from .utils import log
+
+#===============================================================================
+
 class PyOntUtilsEdge(tuple):
     """ Expansion of curies must happen before construction if it is going to
         happen at all. The expansion rule must be known beforehand. """
@@ -376,12 +380,8 @@ class Apinatomy:
     @staticmethod
     def parse_connectivity(data):
     #============================
-        blob, *_ = Apinatomy.deblob(data)
-        starts = [nifstd.obj(e) for e in blob['edges'] if nifstd.pred(e, Apinatomy.lyphs)]
-        nexts = [(nifstd.sub(t), nifstd.obj(t)) for start in starts for t in
-                  nifstd.ematch(blob, (lambda e, m: nifstd.pred(e, Apinatomy.next)
-                                              or nifstd.pred(e, Apinatomy.next_s)), None)]
-        nodes = sorted(set([tuple([Apinatomy.layer_regions(blob, e) for e in p]) for p in nexts]))
+
+        warnings = []
 
         def anatomical_layer(pair_list):
             if pair_list[0][0] is None:
@@ -393,7 +393,25 @@ class Apinatomy:
             layers += [ layer for pair in pair_list[1:] for layer in pair ]
             return (anatomical_id, tuple(layers))
 
-        return list(set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0])) for n0, n1 in nodes if n0[1:] != n1[1:]))
+        def check_node(node):
+            if len(node[1:][0]) == 0:
+                warning = f'SCKAN: No anatomical data available for {node[0]}'
+                warnings.append(warning)
+                log.warning(warning)
+
+        blob, *_ = Apinatomy.deblob(data)
+        starts = [nifstd.obj(e) for e in blob['edges'] if nifstd.pred(e, Apinatomy.lyphs)]
+        nexts = [(nifstd.sub(t), nifstd.obj(t)) for start in starts for t in
+                  nifstd.ematch(blob, (lambda e, m: nifstd.pred(e, Apinatomy.next)
+                                              or nifstd.pred(e, Apinatomy.next_s)), None)]
+        nodes = sorted(set([tuple([Apinatomy.layer_regions(blob, e) for e in p]) for p in nexts]))
+        for n0, n1 in nodes:
+            check_node(n0)
+            check_node(n1)
+
+        return (list(set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0]))
+                            for n0, n1 in nodes if n0[1:] != n1[1:] and len(n0[1:][0]) and len(n1[1:][0])
+                )), warnings)
 
     #===========================================================================
 
@@ -420,7 +438,10 @@ class Apinatomy:
                 if nifstd.sub(edge, apinatomy_neuron) and nifstd.pred(edge, Apinatomy.references):
                     references.append(nifstd.obj(edge))
             knowledge['references'] = references
-        knowledge['connectivity'] = Apinatomy.parse_connectivity(data)
+        connectivity = Apinatomy.parse_connectivity(data)
+        knowledge['connectivity'] = connectivity[0]
+        if len(connectivity[1]):
+            knowledge['errors'] = connectivity[1]
         return knowledge
 
     @staticmethod
