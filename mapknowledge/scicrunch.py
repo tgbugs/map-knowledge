@@ -32,8 +32,6 @@ INTERLEX_ONTOLOGIES = ['ILX', 'NLX']
 
 CONNECTIVITY_ONTOLOGIES = [ 'ilxtr' ]
 
-SPARC_ONTOLOGIES = ['CL', 'EMAPA', 'FMA', 'NCBITaxon', 'UBERON']
-
 APINATOMY_MODEL_PREFIX = 'https://apinatomy.org/uris/models/'
 
 #===============================================================================
@@ -104,18 +102,18 @@ class SciCrunch(object):
                                     params=params)
                 if data is not None:
                     knowledge = Apinatomy.neuron_knowledge(entity, data)
-            elif ontology in SPARC_ONTOLOGIES:
-                data = request_json(SCICRUNCH_SPARC_VOCAB.format(API_ENDPOINT=self.__api_endpoint,
-                                                                 TERM=entity),
-                                    params=params)
-                if data is not None:
-                    knowledge['label'] = data.get('labels', [entity])[0]
             elif entity.startswith(APINATOMY_MODEL_PREFIX):
                 params['cypherQuery'] = Apinatomy.neurons_for_model_cypher(entity)
                 data = request_json(SCICRUNCH_SPARC_CYPHER.format(API_ENDPOINT=self.__api_endpoint),
                                     params=params)
                 if data is not None:
                     knowledge = Apinatomy.model_knowledge(entity, data)
+            else:
+                data = request_json(SCICRUNCH_SPARC_VOCAB.format(API_ENDPOINT=self.__api_endpoint,
+                                                                 TERM=entity),
+                                    params=params)
+                if data is not None:
+                    knowledge['label'] = data.get('labels', [entity])[0]
         if len(knowledge) == 0 and entity not in self.__unknown_entities:
             log.warning('Unknown anatomical entity: {}'.format(entity))
             self.__unknown_entities.append(entity)
