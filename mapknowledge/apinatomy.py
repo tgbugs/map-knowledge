@@ -378,6 +378,37 @@ class Apinatomy:
         return start, tuple(lrs)
 
     @staticmethod
+    def find_terminals(blob, type):
+        return [es for es in blob['edges']
+                if nifstd.pred(es, Apinatomy.inheritedExternal_s)
+                and nifstd.obj(es, type)
+                and nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
+                                    and nifstd.pred(e, Apinatomy.topology_s)
+                                    and nifstd.obj(e, Apinatomy.BAG)),
+                                  nifstd.sub(es))]
+
+    @staticmethod
+    def find_region(blob, edge):
+        collect = []
+        def select(e, m, collect=collect):
+            if nifstd.sub(e, m):
+                if (nifstd.pred(e, Apinatomy.layerIn)
+                 or nifstd.pred(e, Apinatomy.fasciculatesIn)
+                 or nifstd.pred(e, Apinatomy.endsIn)):
+                    return nifstd.ematch(blob, select, nifstd.obj(e))
+                elif nifstd.pred(e, Apinatomy.ontologyTerms):
+                    region = nifstd.obj(e)
+                    collect.extend([b for b in blob['nodes'] if b['id'] == region])
+                    return region
+        nifstd.ematch(blob, select, nifstd.sub(edge))
+        return collect
+
+    @staticmethod
+    def find_terminal_regions(blob, type):
+        return [region for es in Apinatomy.find_terminals(blob, type) for region in Apinatomy.find_region(blob, es)]
+
+
+    @staticmethod
     def parse_connectivity(data):
     #============================
 
@@ -409,9 +440,19 @@ class Apinatomy:
             check_node(n0)
             check_node(n1)
 
-        return (list(set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0]))
-                            for n0, n1 in nodes if n0[1:] != n1[1:] and len(n0[1:][0]) and len(n1[1:][0])
-                )), warnings)
+        # find terminal regions
+        axon_terminal_regions = Apinatomy.find_terminal_regions(blob, Apinatomy.axon)
+        dendrite_terminal_regions = Apinatomy.find_terminal_regions(blob, Apinatomy.dendrite)
+
+        result = {
+            'axons': list(set(r['id'] for r in axon_terminal_regions)),
+            'dendrites': list(set(r['id'] for r in dendrite_terminal_regions)),
+            'connectivity': list(set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0]))
+                                for n0, n1 in nodes if n0[1:] != n1[1:] and len(n0[1:][0]) and len(n1[1:][0]))),
+        }
+        if len(warnings):
+            result['errors'] = warnings
+        return result
 
     #===========================================================================
 
@@ -438,10 +479,7 @@ class Apinatomy:
                 if nifstd.sub(edge, apinatomy_neuron) and nifstd.pred(edge, Apinatomy.references):
                     references.append(nifstd.obj(edge))
             knowledge['references'] = references
-        connectivity = Apinatomy.parse_connectivity(data)
-        knowledge['connectivity'] = connectivity[0]
-        if len(connectivity[1]):
-            knowledge['errors'] = connectivity[1]
+        knowledge.update(Apinatomy.parse_connectivity(data))
         return knowledge
 
     @staticmethod
