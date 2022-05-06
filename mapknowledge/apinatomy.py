@@ -361,6 +361,7 @@ class Apinatomy:
                      nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
                                        and not Apinatomy.isLayer(blob, m)
                                        and (nifstd.pred(e, Apinatomy.inheritedExternal)
+                                         or nifstd.pred(e, Apinatomy.inheritedExternal_s)
                                          or nifstd.pred(e, Apinatomy.ontologyTerms))),
                                 d)]
         regions = [nifstd.obj(t) for d in direct for t in
