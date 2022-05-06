@@ -370,7 +370,7 @@ class Apinatomy:
                                      and (nifstd.pred(e, Apinatomy.inheritedExternal)
                                        or nifstd.pred(e, Apinatomy.inheritedExternal_s)
                                        or nifstd.pred(e, Apinatomy.ontologyTerms))),
-                              d)]
+                                 d)]
 
         lrs = Apinatomy.reclr(blob, start)
 
@@ -412,7 +412,6 @@ class Apinatomy:
     @staticmethod
     def parse_connectivity(data):
     #============================
-
         warnings = []
 
         def anatomical_layer(pair_list):
@@ -432,6 +431,7 @@ class Apinatomy:
                 log.warning(warning)
 
         blob, *_ = Apinatomy.deblob(data)
+
         starts = [nifstd.obj(e) for e in blob['edges'] if nifstd.pred(e, Apinatomy.lyphs)]
         nexts = [(nifstd.sub(t), nifstd.obj(t)) for start in starts for t in
                   nifstd.ematch(blob, (lambda e, m: nifstd.pred(e, Apinatomy.next)
