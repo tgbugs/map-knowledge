@@ -58,9 +58,9 @@ KNOWLEDGE_SCHEMA = """
 
 class KnowledgeBase(object):
     def __init__(self, store_directory, read_only=False, create=False, knowledge_base=KNOWLEDGE_BASE):
+        self.__db = None
         if store_directory is None:
             self.__db_name = None
-            self.__db = None
         else:
             self.__db_name = Path(store_directory, knowledge_base).resolve()
             if create and not self.__db_name.exists():
@@ -69,9 +69,7 @@ class KnowledgeBase(object):
                 db.executescript(KNOWLEDGE_SCHEMA)
                 db.close()
             ## What about upgrading when tables (e.g. knowledge) don't exist???
-            db_uri = '{}?mode=ro'.format(self.__db_name.as_uri()) if read_only else self.__db_name.as_uri()
-            self.__db = sqlite3.connect(db_uri, uri=True,
-                detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+            self.open(read_only=read_only)
 
     @property
     def db(self):
@@ -84,6 +82,13 @@ class KnowledgeBase(object):
     def close(self):
         if self.__db is not None:
             self.__db.close()
+            self.__db = None
+
+    def open(self, read_only=False):
+        self.close()
+        db_uri = '{}?mode=ro'.format(self.__db_name.as_uri()) if read_only else self.__db_name.as_uri()
+        self.__db = sqlite3.connect(db_uri, uri=True,
+                                    detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
 
 #===============================================================================
 
@@ -101,7 +106,6 @@ class KnowledgeStore(KnowledgeBase):
         self.__entity_knowledge = {}     # Cache lookups
         self.__scicrunch = SciCrunch(api_endpoint=scicrunch_api, scicrunch_key=scicrunch_key)
         self.__refreshed = []
-
 
     @property
     def scicrunch(self):
