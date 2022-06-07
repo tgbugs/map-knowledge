@@ -41,7 +41,7 @@ SCICRUNCH_API_ENDPOINT = 'https://scicrunch.org/api/1'
 #===============================================================================
 
 SCICRUNCH_INTERLEX_VOCAB = f'{{API_ENDPOINT}}/ilx/search/curie/{{TERM}}'
-SCICRUNCH_SPARC_API = f'{{API_ENDPOINT}}/sparc-scigraph'
+SCICRUNCH_SPARC_API = f'{{API_ENDPOINT}}/sckan-scigraph'
 
 SCICRUNCH_SPARC_CYPHER = f'{SCICRUNCH_SPARC_API}/cypher/execute.json'
 SCICRUNCH_SPARC_VOCAB = f'{SCICRUNCH_SPARC_API}/vocabulary/id/{{TERM}}.json'
