@@ -44,6 +44,8 @@ KNOWLEDGE_BASE = 'knowledgebase.db'
 
 KNOWLEDGE_SCHEMA = """
     begin;
+    create table metadata (name text primary key, value text);
+
     create table knowledge (entity text primary key, knowledge text);
     create unique index knowledge_index on knowledge(entity);
 
@@ -95,6 +97,17 @@ class KnowledgeBase(object):
         db_uri = '{}?mode=ro'.format(self.__db_name.as_uri()) if read_only else self.__db_name.as_uri()
         self.__db = sqlite3.connect(db_uri, uri=True,
                                     detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+
+    def metadata(self, name):
+        row = self.__db.execute('select value from metadata where name=?', (name,)).fetchone()
+        if row is not None:
+            return row[0]
+
+    def set_metadata(self, name, value):
+        if not self.__db.in_transaction:
+            self.__db.execute('begin')
+        self.db.execute('replace into metadata values (?, ?)', (name,value))
+        self.__db.execute('commit')
 
 #===============================================================================
 
