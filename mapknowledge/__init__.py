@@ -25,6 +25,7 @@ __version__ = "0.9.9"
 import sqlite3
 import datetime
 import json
+import os
 
 from pathlib import Path
 
@@ -63,6 +64,10 @@ class KnowledgeBase(object):
         if store_directory is None:
             self.__db_name = None
         else:
+            # Create store directory if it doesn't exist
+            if not os.path.exists(store_directory):
+                os.makedirs(store_directory)
+            # Create knowledge base if it doesn't exist
             self.__db_name = Path(store_directory, knowledge_base).resolve()
             if create and not self.__db_name.exists():
                 db = sqlite3.connect(self.__db_name,
