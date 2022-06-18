@@ -412,7 +412,6 @@ class Apinatomy:
     @staticmethod
     def parse_connectivity(data):
     #============================
-        warnings = []
 
         def anatomical_layer(pair_list):
             if pair_list[0][0] is None:
@@ -424,12 +423,6 @@ class Apinatomy:
             layers += [ layer for pair in pair_list[1:] for layer in pair ]
             return (anatomical_id, tuple(layers))
 
-        def check_node(node):
-            if len(node[1:][0]) == 0:
-                warning = f'SCKAN: No anatomical data available for {node[0]}'
-                warnings.append(warning)
-                log.warning(warning)
-
         blob, *_ = Apinatomy.deblob(data)
 
         starts = [nifstd.obj(e) for e in blob['edges'] if nifstd.pred(e, Apinatomy.lyphs)]
@@ -437,9 +430,6 @@ class Apinatomy:
                   nifstd.ematch(blob, (lambda e, m: nifstd.pred(e, Apinatomy.next)
                                               or nifstd.pred(e, Apinatomy.next_s)), None)]
         nodes = sorted(set([tuple([Apinatomy.layer_regions(blob, e) for e in p]) for p in nexts]))
-        for n0, n1 in nodes:
-            check_node(n0)
-            check_node(n1)
 
         # find terminal regions
         axon_terminal_regions = Apinatomy.find_terminal_regions(blob, Apinatomy.axon)
@@ -451,8 +441,7 @@ class Apinatomy:
             'connectivity': list(set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0]))
                                 for n0, n1 in nodes if n0[1:] != n1[1:] and len(n0[1:][0]) and len(n1[1:][0]))),
         }
-        if len(warnings):
-            result['errors'] = warnings
+
         return result
 
     #===========================================================================
