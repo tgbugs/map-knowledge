@@ -40,8 +40,14 @@ SCICRUNCH_API_ENDPOINT = 'https://scicrunch.org/api/1'
 
 #===============================================================================
 
-SCICRUNCH_INTERLEX_VOCAB = f'{{API_ENDPOINT}}/ilx/search/curie/{{TERM}}'
-SCICRUNCH_SPARC_API = f'{{API_ENDPOINT}}/sparc-scigraph'
+# Values for SCICRUNCH_RELEASE
+SCICRUNCH_PRODUCTION = 'sckan-scigraph'
+SCICRUNCH_STAGING = 'sparc-scigraph'
+
+#===============================================================================
+
+SCICRUNCH_INTERLEX_VOCAB = '{API_ENDPOINT}/ilx/search/curie/{TERM}'
+SCICRUNCH_SPARC_API = '{API_ENDPOINT}/{SCICRUNCH_RELEASE}'
 
 SCICRUNCH_SPARC_CYPHER = f'{SCICRUNCH_SPARC_API}/cypher/execute.json'
 SCICRUNCH_SPARC_VOCAB = f'{SCICRUNCH_SPARC_API}/vocabulary/id/{{TERM}}.json'
@@ -74,13 +80,19 @@ class NAMESPACES:
 #===============================================================================
 
 class SciCrunch(object):
-    def __init__(self, api_endpoint=SCICRUNCH_API_ENDPOINT, scicrunch_key=None):
+    def __init__(self, api_endpoint=SCICRUNCH_API_ENDPOINT, scicrunch_release=SCICRUNCH_STAGING, scicrunch_key=None):
         self.__api_endpoint = api_endpoint
+        self.__scicrunch_release = scicrunch_release
+        self.__sparc_api_endpoint = SCICRUNCH_SPARC_API.format(API_ENDPOINT=api_endpoint,
+                                                               SCICRUNCH_RELEASE=scicrunch_release)
         self.__unknown_entities = []
         self.__scicrunch_key = scicrunch_key if scicrunch_key is not None else os.environ.get('SCICRUNCH_API_KEY')
         if self.__scicrunch_key is None:
             log.warning('Undefined SCICRUNCH_API_KEY: SciCrunch knowledge will not be looked up')
 
+    @property
+    def sparc_api_endpoint(self):
+        return self.__sparc_api_endpoint
     def get_knowledge(self, entity: str) -> dict:
     #============================================
         knowledge = {}
@@ -92,24 +104,28 @@ class SciCrunch(object):
             ontology = entity.split(':')[0]
             if   ontology in INTERLEX_ONTOLOGIES:
                 data = request_json(SCICRUNCH_INTERLEX_VOCAB.format(API_ENDPOINT=self.__api_endpoint,
+                                                                    SCICRUNCH_RELEASE=self.__scicrunch_release,
                                                                     TERM=entity),
                                     params=params)
                 if data is not None:
                     knowledge['label'] = data.get('data', {}).get('label', entity)
             elif ontology in CONNECTIVITY_ONTOLOGIES:
                 data = request_json(SCICRUNCH_CONNECTIVITY_NEURONS.format(API_ENDPOINT=self.__api_endpoint,
+                                                                          SCICRUNCH_RELEASE=self.__scicrunch_release,
                                                                           NEURON_ID=entity),
                                     params=params)
                 if data is not None:
                     knowledge = Apinatomy.neuron_knowledge(entity, data)
             elif entity.startswith(APINATOMY_MODEL_PREFIX):
                 params['cypherQuery'] = Apinatomy.neurons_for_model_cypher(entity)
-                data = request_json(SCICRUNCH_SPARC_CYPHER.format(API_ENDPOINT=self.__api_endpoint),
+                data = request_json(SCICRUNCH_SPARC_CYPHER.format(API_ENDPOINT=self.__api_endpoint,
+                                                                  SCICRUNCH_RELEASE=self.__scicrunch_release),
                                     params=params)
                 if data is not None:
                     knowledge = Apinatomy.model_knowledge(entity, data)
             else:
                 data = request_json(SCICRUNCH_SPARC_VOCAB.format(API_ENDPOINT=self.__api_endpoint,
+                                                                 SCICRUNCH_RELEASE=self.__scicrunch_release,
                                                                  TERM=entity),
                                     params=params)
                 if data is not None:
@@ -128,7 +144,8 @@ class SciCrunch(object):
                 'limit': 9999,
             }
             params['cypherQuery'] = Apinatomy.phenotype_for_neuron_cypher(NAMESPACES.uri(entity))
-            data = request_json(SCICRUNCH_SPARC_CYPHER.format(API_ENDPOINT=self.__api_endpoint),
+            data = request_json(SCICRUNCH_SPARC_CYPHER.format(API_ENDPOINT=self.__api_endpoint,
+                                                              SCICRUNCH_RELEASE=self.__scicrunch_release),
                                 params=params)
             if data is not None:
                 phenotypes = Apinatomy.phenotypes(data)

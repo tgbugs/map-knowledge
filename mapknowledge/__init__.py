@@ -30,7 +30,8 @@ from pathlib import Path
 
 #===============================================================================
 
-from .scicrunch import APINATOMY_MODEL_PREFIX, CONNECTIVITY_ONTOLOGIES, SCICRUNCH_API_ENDPOINT
+from .scicrunch import APINATOMY_MODEL_PREFIX, CONNECTIVITY_ONTOLOGIES
+from .scicrunch import SCICRUNCH_API_ENDPOINT, SCICRUNCH_PRODUCTION, SCICRUNCH_STAGING
 from .scicrunch import SciCrunch
 from .utils import log
 
@@ -97,6 +98,7 @@ class KnowledgeStore(KnowledgeBase):
                        knowledge_base=KNOWLEDGE_BASE,
                        clean_connectivity=False,
                        scicrunch_api=SCICRUNCH_API_ENDPOINT,
+                       scicrunch_release=SCICRUNCH_PRODUCTION,
                        scicrunch_key=None,
                        create=True,
                        read_only=False):
@@ -104,7 +106,9 @@ class KnowledgeStore(KnowledgeBase):
         self.__knowledge_base = (store_directory is not None)
         self.__clean_connectivity = clean_connectivity
         self.__entity_knowledge = {}     # Cache lookups
-        self.__scicrunch = SciCrunch(api_endpoint=scicrunch_api, scicrunch_key=scicrunch_key)
+        self.__scicrunch = SciCrunch(api_endpoint=scicrunch_api,
+                                     scicrunch_release=scicrunch_release,
+                                     scicrunch_key=scicrunch_key)
         self.__refreshed = []
 
     @property
