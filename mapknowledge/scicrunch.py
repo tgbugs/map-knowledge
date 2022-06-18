@@ -129,7 +129,10 @@ class SciCrunch(object):
                                                                  TERM=entity),
                                     params=params)
                 if data is not None:
-                    knowledge['label'] = data.get('labels', [entity])[0]
+                    if len(labels := data.get('labels', [])):
+                        knowledge['label'] = labels[0]
+                    else:
+                        knowledge['label'] = entity
         if len(knowledge) == 0 and entity not in self.__unknown_entities:
             log.warning('Unknown anatomical entity: {}'.format(entity))
             self.__unknown_entities.append(entity)
