@@ -55,6 +55,8 @@ KNOWLEDGE_SCHEMA = """
     create table publications (entity text, publication text);
     create index publications_entity_index on publications(entity);
     create index publications_publication_index on publications(publication);
+
+    create table connectivity_models (model text primary key);
     commit;
 """
 
@@ -133,6 +135,10 @@ class KnowledgeStore(KnowledgeBase):
     def scicrunch(self):
         return self.__scicrunch
 
+    def connectivity_models(self):
+    #=============================
+        return [row[0] for row in self.db.execute('select model from connectivity_models order by model')]
+
     def entity_knowledge(self, entity):
     #==================================
         # Optionally refresh local connectivity knowledge from SciCrunch
@@ -174,6 +180,8 @@ class KnowledgeStore(KnowledgeBase):
                     self.db.execute('replace into labels values (?, ?)', (entity, knowledge['label']))
                 if 'references' in knowledge:
                     self.update_references(entity, knowledge.get('references', []))
+                if entity.startswith(APINATOMY_MODEL_PREFIX):
+                    self.db.execute('replace into connectivity_models values (?)', (entity, ))
                 self.db.commit()
 
         # Use the entity's value as its label if none is defined
