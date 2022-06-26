@@ -159,6 +159,13 @@ class KnowledgeStore(KnowledgeBase):
         else:
             return []
 
+    def labels(self):
+    #================
+        if self.db is not None:
+            return [tuple(row) for row in self.db.execute('select entity, label from labels order by entity')]
+        else:
+            return []
+
     def entity_knowledge(self, entity):
     #==================================
         # Optionally refresh local connectivity knowledge from SciCrunch
