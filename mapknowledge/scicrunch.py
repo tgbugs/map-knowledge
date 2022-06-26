@@ -80,7 +80,7 @@ class NAMESPACES:
 #===============================================================================
 
 class SciCrunch(object):
-    def __init__(self, api_endpoint=SCICRUNCH_API_ENDPOINT, scicrunch_release=SCICRUNCH_STAGING, scicrunch_key=None):
+    def __init__(self, api_endpoint=SCICRUNCH_API_ENDPOINT, scicrunch_release=SCICRUNCH_PRODUCTION, scicrunch_key=None):
         self.__api_endpoint = api_endpoint
         self.__scicrunch_release = scicrunch_release
         self.__sparc_api_endpoint = SCICRUNCH_SPARC_API.format(API_ENDPOINT=api_endpoint,
