@@ -144,7 +144,20 @@ class KnowledgeStore(KnowledgeBase):
 
     def connectivity_models(self):
     #=============================
-        return [row[0] for row in self.db.execute('select model from connectivity_models order by model')]
+        if self.__scicrunch is not None:
+            models = self.__scicrunch.connectivity_models()
+            if self.db is not None and not self.read_only:
+                if not self.db.in_transaction:
+                    self.db.execute('begin')
+                for model, label in models.items():
+                    self.db.execute('replace into connectivity_models values (?)', (model, ))
+                    self.db.execute('replace into labels values (?, ?)', (model, label))
+                self.db.commit()
+            return sorted(models.keys())
+        elif self.db is not None:
+            return [row[0] for row in self.db.execute('select model from connectivity_models order by model')]
+        else:
+            return []
 
     def entity_knowledge(self, entity):
     #==================================
@@ -187,10 +200,7 @@ class KnowledgeStore(KnowledgeBase):
                     self.db.execute('replace into labels values (?, ?)', (entity, knowledge['label']))
                 if 'references' in knowledge:
                     self.update_references(entity, knowledge.get('references', []))
-                if entity.startswith(APINATOMY_MODEL_PREFIX):
-                    self.db.execute('replace into connectivity_models values (?)', (entity, ))
                 self.db.commit()
-
         # Use the entity's value as its label if none is defined
         if 'label' not in knowledge:
             knowledge['label'] = entity

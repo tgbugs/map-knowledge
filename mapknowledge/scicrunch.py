@@ -93,6 +93,22 @@ class SciCrunch(object):
     @property
     def sparc_api_endpoint(self):
         return self.__sparc_api_endpoint
+    def connectivity_models(self):
+    #=============================
+        models = {}
+        if self.__scicrunch_key is not None:
+            params = {
+                'api_key': self.__scicrunch_key,
+                'limit': 9999,
+            }
+            data = request_json(SCICRUNCH_CONNECTIVITY_MODELS.format(API_ENDPOINT=self.__api_endpoint,
+                                                                     SCICRUNCH_RELEASE=self.__scicrunch_release),
+                                params=params)
+            if data is not None:
+                for node in data.get('nodes', []):
+                    models[node['id']] = node['lbl']
+        return models
+
     def get_knowledge(self, entity: str) -> dict:
     #============================================
         knowledge = {}
