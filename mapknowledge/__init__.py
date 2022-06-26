@@ -65,6 +65,7 @@ KNOWLEDGE_SCHEMA = """
 class KnowledgeBase(object):
     def __init__(self, store_directory, read_only=False, create=False, knowledge_base=KNOWLEDGE_BASE):
         self.__db = None
+        self.__read_only = read_only
         if store_directory is None:
             self.__db_name = None
         else:
@@ -88,6 +89,10 @@ class KnowledgeBase(object):
     @property
     def db_name(self):
         return self.__db_name
+
+    @property
+    def read_only(self):
+        return self.__read_only
 
     def close(self):
         if self.__db is not None:
@@ -123,12 +128,14 @@ class KnowledgeStore(KnowledgeBase):
                        create=True,
                        read_only=False):
         super().__init__(store_directory, create=create, knowledge_base=knowledge_base, read_only=read_only)
-        self.__knowledge_base = (store_directory is not None)
         self.__clean_connectivity = clean_connectivity
         self.__entity_knowledge = {}     # Cache lookups
-        self.__scicrunch = SciCrunch(api_endpoint=scicrunch_api,
-                                     scicrunch_release=scicrunch_release,
-                                     scicrunch_key=scicrunch_key)
+        if scicrunch_api is not None:
+            self.__scicrunch = SciCrunch(api_endpoint=scicrunch_api,
+                                         scicrunch_release=scicrunch_release,
+                                         scicrunch_key=scicrunch_key)
+        else:
+            self.__scicrunch = None
         self.__refreshed = []
 
     @property
@@ -142,7 +149,7 @@ class KnowledgeStore(KnowledgeBase):
     def entity_knowledge(self, entity):
     #==================================
         # Optionally refresh local connectivity knowledge from SciCrunch
-        if (self.__knowledge_base
+        if (self.db is not None
          and self.__clean_connectivity
          and (entity.startswith(APINATOMY_MODEL_PREFIX)
            or entity.split(':')[0] in CONNECTIVITY_ONTOLOGIES)
@@ -158,19 +165,19 @@ class KnowledgeStore(KnowledgeBase):
             if len(knowledge): return knowledge
 
         knowledge = {}
-        if self.__knowledge_base:
+        if self.db is not None:
             # Check our database
             row = self.db.execute('select knowledge from knowledge where entity=?', (entity,)).fetchone()
             if row is not None:
                 knowledge = json.loads(row[0])
-        if len(knowledge) == 0:
+        if len(knowledge) == 0 and self.__scicrunch is not None:
             # Consult SciCrunch if we don't know about the entity
             knowledge = self.__scicrunch.get_knowledge(entity)
             if 'connectivity' in knowledge:
                 phenotypes = self.__scicrunch.get_phenotypes(entity)
                 if len(phenotypes) > 0:
                     knowledge['phenotypes'] = phenotypes
-            if len(knowledge) > 0 and self.__knowledge_base:
+            if len(knowledge) > 0 and self.db is not None and not self.read_only:
                 if not self.db.in_transaction:
                     self.db.execute('begin')
                 # Save knowledge in our database
@@ -193,7 +200,7 @@ class KnowledgeStore(KnowledgeBase):
 
     def label(self, entity):
     #=======================
-        if self.__knowledge_base:
+        if self.db is not None:
             row = self.db.execute('select label from labels where entity=?', (entity,)).fetchone()
             if row is not None:
                 return row[0]
@@ -202,7 +209,7 @@ class KnowledgeStore(KnowledgeBase):
 
     def update_references(self, entity, references):
     #===============================================
-        if self.__knowledge_base:
+        if self.db is not None:
             with self.db:
                 self.db.execute('delete from publications where entity = ?', (entity, ))
                 self.db.executemany('insert into publications(entity, publication) values (?, ?)',
