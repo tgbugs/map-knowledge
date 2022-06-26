@@ -35,6 +35,10 @@ from rdflib.extras import external_graph_libs as egl
 
 from .utils import log
 
+EXCLUDED_LAYERS = [None, 'UBERON:0005844']  # Layers shouldn't be resolving to
+                                            # ``spinal cord`` nor to ``None``.
+                                            # A SCKAN issue
+
 #===============================================================================
 
 class PyOntUtilsEdge(tuple):
@@ -414,13 +418,15 @@ class Apinatomy:
     #============================
 
         def anatomical_layer(pair_list):
+            layers = []
             if pair_list[0][0] is None:
                 anatomical_id = pair_list[0][1]
-                layers = []
             else:
                 anatomical_id = pair_list[0][0]
-                layers = [pair_list[0][1]]
-            layers += [ layer for pair in pair_list[1:] for layer in pair ]
+                if pair_list[0][1] not in EXCLUDED_LAYERS:
+                    layers.append(pair_list[0][1])
+            layers += [layer for pair in pair_list[1:] for layer in pair
+                            if layer not in EXCLUDED_LAYERS]
             return (anatomical_id, tuple(layers))
 
         blob, *_ = Apinatomy.deblob(data)
