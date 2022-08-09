@@ -128,7 +128,6 @@ class KnowledgeStore(KnowledgeBase):
                        create=True,
                        read_only=False):
         super().__init__(store_directory, create=create, knowledge_base=knowledge_base, read_only=read_only)
-        self.__clean_connectivity = clean_connectivity
         self.__entity_knowledge = {}     # Cache lookups
         if scicrunch_api is not None:
             self.__scicrunch = SciCrunch(api_endpoint=scicrunch_api,
@@ -136,7 +135,15 @@ class KnowledgeStore(KnowledgeBase):
                                          scicrunch_key=scicrunch_key)
         else:
             self.__scicrunch = None
-        self.__refreshed = []
+        # Optionally clear local connectivity knowledge from SciCrunch
+        if (self.db is not None and clean_connectivity):
+            entities = [f'entity like {APINATOMY_MODEL_PREFIX}%']
+            entities.extend([f'entity like {ontology}:%' for ontology in CONNECTIVITY_ONTOLOGIES])
+            pattern = (' or '.join(entities),)
+            log.info(f'Clearing connectivity knowledge...')
+            self.db.execute('delete from knowledge where ?', pattern)
+            self.db.execute('delete from labels where ?', pattern)
+            self.db.execute('delete from publications where ?', pattern)
 
     @property
     def scicrunch(self):
@@ -169,17 +176,7 @@ class KnowledgeStore(KnowledgeBase):
     def entity_knowledge(self, entity):
     #==================================
         # Optionally refresh local connectivity knowledge from SciCrunch
-        if (self.db is not None
-         and self.__clean_connectivity
-         and (entity.startswith(APINATOMY_MODEL_PREFIX)
-           or entity.split(':')[0] in CONNECTIVITY_ONTOLOGIES)
-         and entity not in self.__refreshed):
-            log.info(f'Refreshing knowledge for {entity}')
-            self.db.execute('delete from knowledge where entity=?', (entity,))
-            self.db.execute('delete from labels where entity=?', (entity,))
-            self.db.execute('delete from publications where entity=?', (entity,))
-            self.__refreshed.append(entity)
-        else:
+        if self.db is not None:
             # Check local cache
             knowledge = self.__entity_knowledge.get(entity, {})
             if len(knowledge): return knowledge
