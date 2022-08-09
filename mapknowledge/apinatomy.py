@@ -260,6 +260,8 @@ class Apinatomy:
         edges = blob['edges']
         nindex = {n['id']:n for n in blob['nodes']}  # FIXME silent errors ;_;
         for e in edges:
+            if e['pred'] == 'apinatomy:nextChainStartLevels':
+                e['pred'] = 'apinatomy:next'
             if e['pred'] in (
                     'apinatomy:target-apinatomy:rootOf-apinatomy:levels',
                     'apinatomy:conveys-apinatomy:source-apinatomy:sourceOf',

@@ -54,10 +54,14 @@ SCICRUNCH_SPARC_VOCAB = f'{SCICRUNCH_SPARC_API}/vocabulary/id/{{TERM}}.json'
 
 SCICRUNCH_SPARC_APINATOMY = f'{SCICRUNCH_SPARC_API}/dynamic/demos/apinat'
 SCICRUNCH_CONNECTIVITY_MODELS = f'{SCICRUNCH_SPARC_APINATOMY}/modelList.json'
-SCICRUNCH_CONNECTIVITY_NEURONS = f'{SCICRUNCH_SPARC_APINATOMY}/neru-5/{{NEURON_ID}}.json'
+SCICRUNCH_CONNECTIVITY_NEURONS = f'{SCICRUNCH_SPARC_APINATOMY}/neru-6/{{NEURON_ID}}.json'
 
 #===============================================================================
 
+## SCKAN version via:
+##<https://cassava.ucsd.edu/sparc/ontologies/N:organization:618e8dd9-f8d2-4dc4-9abb-c6aaab2e78a0> owl:versionInfo ?o
+## from: https://nih-sparc.slack.com/archives/C0261A0L5LJ/p1648163640808399?thread_ts=1648066897.791529&cid=C0261A0L5LJ
+##
 class NAMESPACES:
     namespaces = {
         'ilxtr': 'http://uri.interlex.org/tgbugs/uris/readable/'
