@@ -1,5 +1,6 @@
 from pprint import pprint
 from mapknowledge import KnowledgeStore
+from mapknowledge.scicrunch import SCICRUNCH_PRODUCTION, SCICRUNCH_STAGING
 
 KEAST_MODEL = 'https://apinatomy.org/uris/models/keast-bladder'
 
@@ -17,21 +18,14 @@ def print_phenotypes(store, entity):
     print(f'{entity}: {knowledge.get("phenotypes", [])}')
 
 if __name__ == '__main__':
-    store = KnowledgeStore(store_directory='.')
-
+    print('Production:')
+    store = KnowledgeStore(scicrunch_release=SCICRUNCH_PRODUCTION)
     print_knowledge(store, KEAST_MODEL)
-    for n in [1, 5, 9, 11]:
-        print_knowledge(store, KEAST_NEURON(n))
+    print_knowledge(store, KEAST_NEURON(9))
+    store.close()
 
-    for n in range(1, 21):
-        print_phenotypes(store, KEAST_NEURON(n))
-
-    print_knowledge(store, 'CL:0000540')
-    print_knowledge(store, 'EMAPA:31526')
-    print_knowledge(store, 'FMA:6541')
-    print_knowledge(store, 'ILX:0777088')
-    print_knowledge(store, 'NCBITaxon:10114')
-    print_knowledge(store, 'UBERON:0002108')
-    print_knowledge(store, 'NLX:158005')
-
+    print('Staging:')
+    store = KnowledgeStore(scicrunch_release=SCICRUNCH_STAGING)
+    print_knowledge(store, KEAST_MODEL)
+    print_knowledge(store, KEAST_NEURON(9))
     store.close()
