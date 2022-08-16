@@ -286,6 +286,13 @@ class Apinatomy:
 
         blob['edges'] = [dict(s) for s in set(frozenset({k:v for k, v in d.items()
                                                          if k != 'meta'}.items()) for d in blob['edges'])]
+
+        def sekey(e):
+            s, p, o = nifstd.sub(e), nifstd.pred(e), nifstd.obj(e)
+            iot = p != Apinatomy.ontologyTerms
+            return iot, p, s, o
+
+        blob['edges'] = sorted(blob['edges'], key=sekey)
         sos = set(sov for e in blob['edges'] for sov in (e['sub'], e['obj']))
         blob['nodes'] = [n for n in blob['nodes'] if n['id'] in sos]
         somas = [e for e in edges if e['pred'] == Apinatomy.internalIn]
@@ -309,8 +316,10 @@ class Apinatomy:
 
         def select_ext(e, m, collect=collect):
             nonlocal col
+            nonlocal layer
             if nifstd.sub(e, m):
                 if nifstd.pred(e, Apinatomy.cloneOf):  # should be zapped during simplify
+                    log.warning(f'should not have hit a cloneOf case {e}')
                     return nifstd.ematch(blob, select_ext, nifstd.obj(e))
                 if (nifstd.pred(e, Apinatomy.ontologyTerms)
                  or nifstd.pred(e, Apinatomy.inheritedExternal)
@@ -318,7 +327,10 @@ class Apinatomy:
                     external = nifstd.obj(e)
                     if col:
                         if layer:
-                            l = layer.pop()
+                            if len(layer) > 1:  # ensure ontologyTerms get priority
+                                l, *layer = layer
+                            else:
+                                l = layer.pop()
                         else:
                             l = None
                         r = [b for b in blob['nodes'] if b['id'] == external][0]['id']  # if this is empty we are in big trouble
