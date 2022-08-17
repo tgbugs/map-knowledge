@@ -129,12 +129,21 @@ class KnowledgeStore(KnowledgeBase):
                        read_only=False):
         super().__init__(store_directory, create=create, knowledge_base=knowledge_base, read_only=read_only)
         self.__entity_knowledge = {}     # Cache lookups
+
+        if (db_name := self.db_name) is not None:
+            cache_msg = f'with cache {db_name}'
+        else:
+            cache_msg = f'with no cache'
         if scicrunch_api is not None:
             self.__scicrunch = SciCrunch(api_endpoint=scicrunch_api,
                                          scicrunch_release=scicrunch_release,
                                          scicrunch_key=scicrunch_key)
+            release = 'production' if scicrunch_release == SCICRUNCH_PRODUCTION else 'staging'
+            scicrunch_msg = f'using {release} SciCrunch at {self.__scicrunch.sparc_api_endpoint}'
         else:
             self.__scicrunch = None
+            scicrunch_msg = 'not using SciCrunch'
+        log.info(f'Map Knowledge version {__version__} {cache_msg} {scicrunch_msg}')
         # Optionally clear local connectivity knowledge from SciCrunch
         if (self.db is not None and clean_connectivity):
             log.info(f'Clearing connectivity knowledge...')
