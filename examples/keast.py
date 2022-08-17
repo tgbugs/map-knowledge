@@ -18,6 +18,9 @@ def print_phenotypes(store, entity):
     print(f'{entity}: {knowledge.get("phenotypes", [])}')
 
 if __name__ == '__main__':
+    import logging
+    logging.basicConfig(level=logging.INFO)
+
     print('Production:')
     store = KnowledgeStore(scicrunch_release=SCICRUNCH_PRODUCTION)
     print_knowledge(store, KEAST_MODEL)
