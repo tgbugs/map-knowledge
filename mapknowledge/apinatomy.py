@@ -514,7 +514,11 @@ class Apinatomy:
     #====================
         phenotypes = []
         for edge in data['edges']:
-            if edge.get('pred') in ['ilxtr:hasPhenotype', 'ilxtr:hasCircuitRolePhenotype']:
+            if edge.get('pred') in [
+                    'ilxtr:hasPhenotype',
+                    'ilxtr:hasProjectionPhenotype',
+                    'ilxtr:hasCircuitRolePhenotype',
+                    'ilxtr:hasFunctionalCircuitRolePhenotype',]:
                 phenotypes.append(edge.get('obj'))
         return phenotypes
 
