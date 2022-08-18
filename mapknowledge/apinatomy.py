@@ -35,9 +35,10 @@ from rdflib.extras import external_graph_libs as egl
 
 from .utils import log
 
-EXCLUDED_LAYERS = [None, 'UBERON:0005844']  # Layers shouldn't be resolving to
-                                            # ``spinal cord`` nor to ``None``.
-                                            # A SCKAN issue
+# Layers shouldn't be resolving to
+# ``spinal cord`` nor to ``None``.
+# A SCKAN issue
+EXCLUDED_LAYERS = [None, 'UBERON:0005844', 'UBERON:0000010', 'UBERON:0001017',]
 
 #===============================================================================
 
@@ -314,6 +315,7 @@ class Apinatomy:
         layer = []
         col = True
 
+        bads = ('UBERON:0000010', 'UBERON:0001017')  # XXX temp fix
         def select_ext(e, m, collect=collect):
             nonlocal col
             nonlocal layer
@@ -329,6 +331,8 @@ class Apinatomy:
                         if layer:
                             if len(layer) > 1:  # ensure ontologyTerms get priority
                                 l, *layer = layer
+                                while l in bads:
+                                    l, *layer = layer
                             else:
                                 l = layer.pop()
                         else:
@@ -369,6 +373,7 @@ class Apinatomy:
                                       or nifstd.pred(e, Apinatomy.inheritedExternal_s)
                                       or nifstd.pred(e, Apinatomy.ontologyTerms))),
                              d)]
+        layers = [l for l in layers if l not in ('UBERON:0000010', 'UBERON:0001017')]  # XXX temp fix
         lregs = []
         if layers:
             ldir = [nifstd.obj(t) for d in direct for t in
@@ -402,8 +407,8 @@ class Apinatomy:
                 if nifstd.pred(es, Apinatomy.inheritedExternal_s)
                 and nifstd.obj(es, type)
                 and nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
-                                    and nifstd.pred(e, Apinatomy.topology_s)
-                                    and nifstd.obj(e, Apinatomy.BAG)),
+                                         and nifstd.pred(e, Apinatomy.topology_s)
+                                         and nifstd.obj(e, Apinatomy.BAG)),
                                   nifstd.sub(es))]
 
     @staticmethod
@@ -423,9 +428,75 @@ class Apinatomy:
         return collect
 
     @staticmethod
-    def find_terminal_regions(blob, type):
-        return [region for es in Apinatomy.find_terminals(blob, type) for region in Apinatomy.find_region(blob, es)]
+    def find_region_layer(blob, edge, bindex):  # XXX did I just reimplement a worse reclr ???
+        collect = []
+        layers = []
+        layers_ies = []
+        donel = set()
+        doner = set()
+        def select_term(e, m, layers=layers):
+            if nifstd.sub(e, m):
+                if (nifstd.pred(e, Apinatomy.ontologyTerms)
+                    or nifstd.pred(e, Apinatomy.inheritedExternal)
+                    or nifstd.pred(e, Apinatomy.inheritedExternal_s)):
+                    layer = nifstd.obj(e)
+                    if layer not in donel:
+                        donel.add(layer)
+                        if (nifstd.pred(e, Apinatomy.inheritedExternal)
+                            or nifstd.pred(e, Apinatomy.inheritedExternal_s)):
+                            layers_ies.append(bindex[layer])
+                        else:
+                            layers.append(bindex[layer])
+                    return layer
 
+        def select(e, m, collect=collect):
+            if nifstd.sub(e, m):
+                if nifstd.pred(e, Apinatomy.layerIn):
+                    # we're at a layer
+                    nifstd.ematch(blob, select_term, nifstd.sub(e))
+                    return nifstd.ematch(blob, select, nifstd.obj(e))
+                elif (nifstd.pred(e, Apinatomy.fasciculatesIn)
+                      or nifstd.pred(e, Apinatomy.endsIn)):
+                    return nifstd.ematch(blob, select, nifstd.obj(e))
+                elif nifstd.pred(e, Apinatomy.ontologyTerms):
+                    region = nifstd.obj(e)
+                    if region not in doner:
+                        doner.add(region)
+                        collect.append(bindex[region])
+                    return region
+        nifstd.ematch(blob, select, nifstd.sub(edge))
+        #pprint((collect, layers, layers_ies))
+        if collect and not layers and not layers_ies:
+            layers = [None]
+        elif layers_ies and not layers:
+            layers = layers_ies
+
+        # this is a temporary hack, it will go away when inheritedExternals and
+        # inheritedOntologyTerms are differentiated in the next release PNS/CNS
+        lids = [l['id'] for l in layers if l is not None]
+        for bad in ('UBERON:0000010', 'UBERON:0001017'):
+            if bad in lids:
+                layers = [l for l in layers if l is None or l['id'] != bad]
+
+        # hacked way to not have to deal with layers also matching as regions
+        # just remove them from regions if they are in layers ...
+        collect = [c for c in collect if c not in layers]
+        if len(collect) != len(layers):
+            raise ValueError(f'len not matched {[c["id"] for c in collect]} '
+                             f'{[l if l is None else l["id"] for l in layers]}\n'
+                             f'{edge}')
+        pprint(([c["id"] for c in collect], [l if l is None else l["id"] for l in layers],))
+        return list(zip(collect, layers))
+
+    @staticmethod
+    def find_terminal_regions(blob, type):
+        return [region for es in Apinatomy.find_terminals(blob, type)
+                for region in Apinatomy.find_region(blob, es)]
+
+    @staticmethod
+    def find_terminal_region_layers(blob, type, bindex):
+        return [(region, layer) for es in Apinatomy.find_terminals(blob, type)
+                for region, layer in Apinatomy.find_region_layer(blob, es, bindex)]
 
     @staticmethod
     def parse_connectivity(data):
@@ -451,13 +522,16 @@ class Apinatomy:
                                               or nifstd.pred(e, Apinatomy.next_s)), None)]
         nodes = sorted(set([tuple([Apinatomy.layer_regions(blob, e) for e in p]) for p in nexts]))
 
-        # find terminal regions
-        axon_terminal_regions = Apinatomy.find_terminal_regions(blob, Apinatomy.axon)
-        dendrite_terminal_regions = Apinatomy.find_terminal_regions(blob, Apinatomy.dendrite)
+        bindex = {n['id']:n for n in blob['nodes']}
+        # find terminal regions and layers
+        axon_terminal_regions = Apinatomy.find_terminal_region_layers(blob, Apinatomy.axon, bindex)
+        dendrite_terminal_regions = Apinatomy.find_terminal_region_layers(blob, Apinatomy.dendrite, bindex)
 
         result = {
-            'axons': list(set(r['id'] for r in axon_terminal_regions)),
-            'dendrites': list(set(r['id'] for r in dendrite_terminal_regions)),
+            'axons': list(set((r['id'], (l['id'] if l is not None else l))
+                              for r, l in axon_terminal_regions)),
+            'dendrites': list(set((r['id'], (l['id'] if l is not None else l))
+                                  for r, l in dendrite_terminal_regions)),
             'connectivity': list(set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0]))
                                 for n0, n1 in nodes if n0[1:] != n1[1:] and len(n0[1:][0]) and len(n1[1:][0]))),
         }
