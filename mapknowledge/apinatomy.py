@@ -590,6 +590,7 @@ class Apinatomy:
         for edge in data['edges']:
             if edge.get('pred') in [
                     'ilxtr:hasPhenotype',
+                    'ilxtr:hasMolecularPhenotype',
                     'ilxtr:hasProjectionPhenotype',
                     'ilxtr:hasCircuitRolePhenotype',
                     'ilxtr:hasFunctionalCircuitRolePhenotype',]:
