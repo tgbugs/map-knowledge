@@ -496,7 +496,7 @@ class Apinatomy:
             raise ValueError(f'len not matched {[c["id"] for c in collect]} '
                              f'{[l if l is None else l["id"] for l in layers]}\n'
                              f'{edge}')
-        pprint(([c["id"] for c in collect], [l if l is None else l["id"] for l in layers],))
+        #pprint(([c["id"] for c in collect], [l if l is None else l["id"] for l in layers],))
         return list(zip(collect, layers))
 
     @staticmethod
