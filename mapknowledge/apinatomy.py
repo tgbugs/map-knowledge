@@ -538,10 +538,10 @@ class Apinatomy:
         dendrite_terminal_regions = Apinatomy.find_terminal_region_layers(blob, Apinatomy.dendrite, bindex)
 
         result = {
-            'axons': list(set((r['id'], (l['id'] if l is not None else l))
-                              for r, l in axon_terminal_regions)),
-            'dendrites': list(set((r['id'], (l['id'] if l is not None else l))
-                                  for r, l in dendrite_terminal_regions)),
+            'axons': [al for al in set(anatomical_layer([ ((l['id'] if l is not None else l), r['id']) ])
+                        for r, l in axon_terminal_regions) if al is not None],
+            'dendrites': [al for al in set(anatomical_layer([ ((l['id'] if l is not None else l), r['id']) ])
+                            for r, l in dendrite_terminal_regions) if al is not None],
             'connectivity': [ (al0, al1) for (al0, al1) in set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0]))
                                 for n0, n1 in nodes if n0[1:] != n1[1:] and len(n0[1:][0]) and len(n1[1:][0])) ## This removes self edges... (ICNs)
                                     if al0 is not None and al1 is not None],
