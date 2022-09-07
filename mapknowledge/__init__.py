@@ -212,7 +212,7 @@ class KnowledgeStore(KnowledgeBase):
                 if 'label' in knowledge:
                     self.db.execute('replace into labels values (?, ?)', (entity, knowledge['label']))
                 if 'references' in knowledge:
-                    self.update_references(entity, knowledge.get('references', []))
+                    self.__update_references(entity, knowledge.get('references', []))
                 self.db.commit()
         # Use the entity's value as its label if none is defined
         if 'label' not in knowledge:
@@ -230,7 +230,7 @@ class KnowledgeStore(KnowledgeBase):
         knowledge = self.entity_knowledge(entity)
         return knowledge['label']
 
-    def update_references(self, entity, references):
+    def __update_references(self, entity, references):
     #===============================================
         if self.db is not None:
             with self.db:
