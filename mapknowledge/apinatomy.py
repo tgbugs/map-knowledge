@@ -512,18 +512,17 @@ class Apinatomy:
     @staticmethod
     def parse_connectivity(data):
     #============================
-
         def anatomical_layer(pair_list):
             layers = []
             if pair_list[0][0] is None:
-                anatomical_id = pair_list[0][1]
+                layers.append(pair_list[0][1])
             else:
-                anatomical_id = pair_list[0][0]
-                if pair_list[0][1] not in EXCLUDED_LAYERS:
-                    layers.append(pair_list[0][1])
-            layers += [layer for pair in pair_list[1:] for layer in pair
-                            if layer not in EXCLUDED_LAYERS]
-            return (anatomical_id, tuple(layers))
+                layers.extend(pair_list[0])
+            for pair in pair_list[1:]:
+                layers.extend(pair)
+            layers = [layer for layer in layers if layer not in EXCLUDED_LAYERS]
+            if len(layers):
+                return (layers[0], tuple(layers[1:]))
 
         blob, *_ = Apinatomy.deblob(data)
 
@@ -543,8 +542,9 @@ class Apinatomy:
                               for r, l in axon_terminal_regions)),
             'dendrites': list(set((r['id'], (l['id'] if l is not None else l))
                                   for r, l in dendrite_terminal_regions)),
-            'connectivity': list(set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0]))
-                                for n0, n1 in nodes if n0[1:] != n1[1:] and len(n0[1:][0]) and len(n1[1:][0]))),
+            'connectivity': [ (al0, al1) for (al0, al1) in set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0]))
+                                for n0, n1 in nodes if n0[1:] != n1[1:] and len(n0[1:][0]) and len(n1[1:][0])) ## This removes self edges... (ICNs)
+                                    if al0 is not None and al1 is not None],
         }
 
         return result
