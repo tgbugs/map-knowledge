@@ -36,9 +36,20 @@ from rdflib.extras import external_graph_libs as egl
 from .utils import log
 
 # Layers shouldn't be resolving to
-# ``spinal cord`` nor to ``None``.
+# ``spinal cord``, etc. nor to ``None``.
 # A SCKAN issue
-EXCLUDED_LAYERS = [None, 'UBERON:0005844', 'UBERON:0000010', 'UBERON:0001017',]
+EXCLUDED_LAYERS = [
+    None,
+    'UBERON:0000010',      # peripheral nervous system
+    'UBERON:0000178',      # blood
+    'UBERON:0000468',      # multicellular organism
+    'UBERON:0001017',      # central nervous system
+    'UBERON:0001359',      # cerebrospinal fluid
+    'UBERON:0002318',      # spinal cord white matter
+    'UBERON:0005844',      # spinal cord segment
+    'UBERON:0015129',      # epicardial fat
+    'UBERON:0016549',      # cns white matter
+]
 
 #===============================================================================
 
@@ -474,7 +485,7 @@ class Apinatomy:
         # this is a temporary hack, it will go away when inheritedExternals and
         # inheritedOntologyTerms are differentiated in the next release PNS/CNS
         lids = [l['id'] for l in layers if l is not None]
-        for bad in ('UBERON:0000010', 'UBERON:0001017'):
+        for bad in EXCLUDED_LAYERS:
             if bad in lids:
                 layers = [l for l in layers if l is None or l['id'] != bad]
 
