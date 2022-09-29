@@ -48,7 +48,6 @@ EXCLUDED_LAYERS = [
     'UBERON:0002318',      # spinal cord white matter
     'UBERON:0003714',      # neural tissue
     'UBERON:0005844',      # spinal cord segment
-    'UBERON:0015129',      # epicardial fat
     'UBERON:0016549',      # cns white matter
 ]
 
