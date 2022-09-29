@@ -505,13 +505,18 @@ class Apinatomy:
                 for region in Apinatomy.find_region(blob, es)]
 
     @staticmethod
-    def find_terminal_region_layers(blob, type, bindex):
-        return [(region, layer) for es in Apinatomy.find_terminals(blob, type)
-                for region, layer in Apinatomy.find_region_layer(blob, es, bindex)]
+    def find_terminal_region_layers(neuron, blob, type, bindex):
+        try:
+            return [(region, layer) for es in Apinatomy.find_terminals(blob, type)
+                    for region, layer in Apinatomy.find_region_layer(blob, es, bindex)]
+        except ValueError as err:
+            # We've got bad data from SCKAN...
+            log.error(f'SCKAN/ApiNATOMY error: {neuron} `{err}`')
+            return []
 
     @staticmethod
-    def parse_connectivity(data):
-    #============================
+    def parse_connectivity(neuron, data):
+    #====================================
         def anatomical_layer(pair_list):
             layers = []
             if pair_list[0][0] is None:
@@ -534,8 +539,8 @@ class Apinatomy:
 
         bindex = {n['id']:n for n in blob['nodes']}
         # find terminal regions and layers
-        axon_terminal_regions = Apinatomy.find_terminal_region_layers(blob, Apinatomy.axon, bindex)
-        dendrite_terminal_regions = Apinatomy.find_terminal_region_layers(blob, Apinatomy.dendrite, bindex)
+        axon_terminal_regions = Apinatomy.find_terminal_region_layers(neuron, blob, Apinatomy.axon, bindex)
+        dendrite_terminal_regions = Apinatomy.find_terminal_region_layers(neuron, blob, Apinatomy.dendrite, bindex)
 
         result = {
             'axons': [al for al in set(anatomical_layer([ ((l['id'] if l is not None else l), r['id']) ])
@@ -574,7 +579,7 @@ class Apinatomy:
                 if nifstd.sub(edge, apinatomy_neuron) and nifstd.pred(edge, Apinatomy.references):
                     references.append(nifstd.obj(edge))
             knowledge['references'] = references
-        knowledge.update(Apinatomy.parse_connectivity(data))
+        knowledge.update(Apinatomy.parse_connectivity(neuron, data))
         return knowledge
 
     @staticmethod
