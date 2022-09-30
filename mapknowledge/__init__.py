@@ -150,9 +150,11 @@ class KnowledgeStore(KnowledgeBase):
             entities = [f'{APINATOMY_MODEL_PREFIX}%']
             entities.extend([f'{ontology}:%' for ontology in CONNECTIVITY_ONTOLOGIES])
             condition = ' or '.join(len(entities)*['entity like ?'])
+            self.db.execute('begin')
             self.db.execute(f'delete from knowledge where {condition}', tuple(entities))
             self.db.execute(f'delete from labels where {condition}', tuple(entities))
             self.db.execute(f'delete from publications where {condition}', tuple(entities))
+            self.db.execute('commit')
 
     @property
     def scicrunch(self):
