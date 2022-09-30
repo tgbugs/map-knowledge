@@ -38,7 +38,7 @@ from .utils import log
 # Layers shouldn't be resolving to
 # ``spinal cord``, etc. nor to ``None``.
 # A SCKAN issue
-EXCLUDED_LAYERS = [
+EXCLUDED_LAYERS = (
     None,
     'UBERON:0000010',      # peripheral nervous system
     'UBERON:0000178',      # blood
@@ -49,7 +49,7 @@ EXCLUDED_LAYERS = [
     'UBERON:0003714',      # neural tissue
     'UBERON:0005844',      # spinal cord segment
     'UBERON:0016549',      # cns white matter
-]
+)
 
 #===============================================================================
 
@@ -326,7 +326,6 @@ class Apinatomy:
         layer = []
         col = True
 
-        bads = ('UBERON:0000010', 'UBERON:0001017')  # XXX temp fix
         def select_ext(e, m, collect=collect):
             nonlocal col
             nonlocal layer
@@ -342,7 +341,7 @@ class Apinatomy:
                         if layer:
                             if len(layer) > 1:  # ensure ontologyTerms get priority
                                 l, *layer = layer
-                                while l in bads:
+                                while l in EXCLUDED_LAYERS:
                                     l, *layer = layer
                             else:
                                 l = layer.pop()
@@ -384,7 +383,7 @@ class Apinatomy:
                                       or nifstd.pred(e, Apinatomy.inheritedExternal_s)
                                       or nifstd.pred(e, Apinatomy.ontologyTerms))),
                              d)]
-        layers = [l for l in layers if l not in ('UBERON:0000010', 'UBERON:0001017')]  # XXX temp fix
+        layers = [l for l in layers if l not in EXCLUDED_LAYERS]  # XXX temp fix
         lregs = []
         if layers:
             ldir = [nifstd.obj(t) for d in direct for t in
