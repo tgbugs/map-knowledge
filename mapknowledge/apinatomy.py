@@ -504,18 +504,23 @@ class Apinatomy:
                 for region in Apinatomy.find_region(blob, es)]
 
     @staticmethod
-    def find_terminal_region_layers(neuron, blob, type, bindex):
+    def find_terminal_region_layers(blob, type, bindex):
         try:
-            return [(region, layer) for es in Apinatomy.find_terminals(blob, type)
-                    for region, layer in Apinatomy.find_region_layer(blob, es, bindex)]
+            return {
+                'terminal-regions':
+                    [(region, layer) for es in Apinatomy.find_terminals(blob, type)
+                        for region, layer in Apinatomy.find_region_layer(blob, es, bindex)]
+                }
         except ValueError as err:
             # We've got bad data from SCKAN...
-            log.error(f'SCKAN/ApiNATOMY error: {neuron} `{err}`')
-            return []
+            return {
+                'terminal-regions': [],
+                'error': str(err)
+            }
 
     @staticmethod
-    def parse_connectivity(neuron, data):
-    #====================================
+    def parse_connectivity(data):
+    #============================
         def anatomical_layer(pair_list):
             layers = []
             if pair_list[0][0] is None:
@@ -538,20 +543,19 @@ class Apinatomy:
 
         bindex = {n['id']:n for n in blob['nodes']}
         # find terminal regions and layers
-        axon_terminal_regions = Apinatomy.find_terminal_region_layers(neuron, blob, Apinatomy.axon, bindex)
-        dendrite_terminal_regions = Apinatomy.find_terminal_region_layers(neuron, blob, Apinatomy.dendrite, bindex)
-
-        result = {
+        axon_terminal_regions = Apinatomy.find_terminal_region_layers(blob, Apinatomy.axon, bindex)
+        dendrite_terminal_regions = Apinatomy.find_terminal_region_layers(blob, Apinatomy.dendrite, bindex)
+        return {
             'axons': [al for al in set(anatomical_layer([ ((l['id'] if l is not None else l), r['id']) ])
-                        for r, l in axon_terminal_regions) if al is not None],
+                        for r, l in axon_terminal_regions['terminal-regions']) if al is not None],
             'dendrites': [al for al in set(anatomical_layer([ ((l['id'] if l is not None else l), r['id']) ])
-                            for r, l in dendrite_terminal_regions) if al is not None],
+                            for r, l in dendrite_terminal_regions['terminal-regions']) if al is not None],
             'connectivity': [ (al0, al1) for (al0, al1) in set((anatomical_layer(n0[1:][0]), anatomical_layer(n1[1:][0]))
                                 for n0, n1 in nodes if n0[1:] != n1[1:] and len(n0[1:][0]) and len(n1[1:][0])) ## This removes self edges... (ICNs)
-                                    if al0 is not None and al1 is not None],
+                                    if al0 is not None and al1 is not None and al0 != al1 ],
+            'errors': [f'find axon: {axon_error}'] if (axon_error := axon_terminal_regions.get('error')) is not None else []
+                    + [f'find dendrite: {dendrite_error}'] if (dendrite_error := dendrite_terminal_regions.get('error')) is not None else []
         }
-
-        return result
 
     #===========================================================================
 
@@ -578,7 +582,7 @@ class Apinatomy:
                 if nifstd.sub(edge, apinatomy_neuron) and nifstd.pred(edge, Apinatomy.references):
                     references.append(nifstd.obj(edge))
             knowledge['references'] = references
-        knowledge.update(Apinatomy.parse_connectivity(neuron, data))
+        knowledge.update(Apinatomy.parse_connectivity(data))
         return knowledge
 
     @staticmethod

@@ -182,13 +182,21 @@ class KnowledgeStore(KnowledgeBase):
         else:
             return []
 
+    @staticmethod
+    def __log_errors(entity, knowledge):
+    #===================================
+        for error in knowledge.get('errors', []):
+            log.error(f'SCKAN Knowledge Error: {entity}: {error}')
+
     def entity_knowledge(self, entity):
     #==================================
         # Optionally refresh local connectivity knowledge from SciCrunch
         if self.db is not None:
             # Check local cache
             knowledge = self.__entity_knowledge.get(entity, {})
-            if len(knowledge): return knowledge
+            if len(knowledge):
+                KnowledgeStore.__log_errors(entity, knowledge)
+                return knowledge
 
         knowledge = {}
         if self.db is not None:
@@ -219,6 +227,9 @@ class KnowledgeStore(KnowledgeBase):
             knowledge['label'] = entity
         # Cache local knowledge
         self.__entity_knowledge[entity] = knowledge
+        # Log any errors
+        KnowledgeStore.__log_errors(entity, knowledge)
+
         return knowledge
 
     def label(self, entity):
