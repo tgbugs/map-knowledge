@@ -342,7 +342,11 @@ class Apinatomy:
                             if len(layer) > 1:  # ensure ontologyTerms get priority
                                 l, *layer = layer
                                 while l in EXCLUDED_LAYERS:
-                                    l, *layer = layer
+                                    if len(layer):
+                                        l, *layer = layer
+                                    else:
+                                        l = None   # NB. ``None`` is in EXCLUDED_LAYERS
+                                        break      # which is why we break
                             else:
                                 l = layer.pop()
                         else:
