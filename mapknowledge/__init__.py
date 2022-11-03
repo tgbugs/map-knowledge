@@ -231,6 +231,8 @@ class KnowledgeStore(KnowledgeBase):
                 self.db.execute('replace into knowledge values (?, ?)', (entity, json.dumps(knowledge)))
                 # Save label and references in their own tables
                 if 'label' in knowledge:
+                    if knowledge['label'] == entity and 'long-label' in knowledge:
+                        knowledge['label'] = knowledge['long-label']
                     self.db.execute('replace into labels values (?, ?)', (entity, knowledge['label']))
                 if 'references' in knowledge:
                     self.__update_references(entity, knowledge.get('references', []))
