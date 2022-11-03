@@ -188,7 +188,7 @@ class KnowledgeStore(KnowledgeBase):
     def __log_errors(entity, knowledge):
     #===================================
         for error in knowledge.get('errors', []):
-            log.error(f'SCKAN Knowledge Error: {entity}: {error}')
+            log.error(f'SCKAN knowledge error: {entity}: {error}')
 
     def entity_knowledge(self, entity):
     #==================================
