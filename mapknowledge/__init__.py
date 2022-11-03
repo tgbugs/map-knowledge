@@ -171,11 +171,14 @@ class KnowledgeStore(KnowledgeBase):
                     self.db.execute('replace into connectivity_models values (?)', (model, ))
                     self.db.execute('replace into labels values (?, ?)', (model, label))
                 self.db.commit()
-            return sorted(models.keys())
+            return models
         elif self.db is not None:
-            return [row[0] for row in self.db.execute('select model from connectivity_models order by model')]
+            return {row[0]: row[1] for row in self.db.execute('''
+                select c.model, l.label from connectivity_models as c
+                    left join labels as l on c.model = l.entity order by model
+                ''')}
         else:
-            return []
+            return {}
 
     def labels(self):
     #================
