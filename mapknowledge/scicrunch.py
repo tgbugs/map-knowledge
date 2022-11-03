@@ -178,6 +178,7 @@ class SciCrunch(object):
         if phenotypes is None and entity not in self.__unknown_entities:
             log.warning('Unknown anatomical entity: {}'.format(entity))
             self.__unknown_entities.append(entity)
+            phenotypes = []
         return phenotypes
 
 #===============================================================================
