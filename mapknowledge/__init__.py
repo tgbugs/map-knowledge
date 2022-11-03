@@ -237,11 +237,14 @@ class KnowledgeStore(KnowledgeBase):
                 if 'references' in knowledge:
                     self.__update_references(entity, knowledge.get('references', []))
                 self.db.commit()
+
         # Use the entity's value as its label if none is defined
         if 'label' not in knowledge:
             knowledge['label'] = entity
+
         # Cache local knowledge
         self.__entity_knowledge[entity] = knowledge
+
         # Log any errors
         KnowledgeStore.__log_errors(entity, knowledge)
 
