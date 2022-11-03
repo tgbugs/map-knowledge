@@ -216,6 +216,14 @@ class KnowledgeStore(KnowledgeBase):
                 phenotypes = self.__scicrunch.get_phenotypes(entity)
                 if len(phenotypes) > 0:
                     knowledge['phenotypes'] = phenotypes
+                # Make sure we have labels for each entity used for connectivity
+                connectivity_terms = set()
+                for (node0, node1) in knowledge['connectivity']:
+                    connectivity_terms.update([node0[0], node1[0]])
+                    connectivity_terms.update(node0[1])
+                    connectivity_terms.update(node1[1])
+                for connectivity_term in connectivity_terms:
+                    self.label(connectivity_term)
             if len(knowledge) > 0 and self.db is not None and not self.read_only:
                 if not self.db.in_transaction:
                     self.db.execute('begin')
