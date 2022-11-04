@@ -227,12 +227,13 @@ class KnowledgeStore(KnowledgeBase):
             if len(knowledge) > 0 and self.db is not None and not self.read_only:
                 if not self.db.in_transaction:
                     self.db.execute('begin')
-                # Save knowledge in our database
+                # Use 'long-label' if the entity's label' is the same as itself.
+                if 'label' in knowledge:
+                    if knowledge['label'] == entity and 'long-label' in knowledge:
+                        knowledge['label'] = knowledge['long-label']                # Save knowledge in our database
                 self.db.execute('replace into knowledge values (?, ?)', (entity, json.dumps(knowledge)))
                 # Save label and references in their own tables
                 if 'label' in knowledge:
-                    if knowledge['label'] == entity and 'long-label' in knowledge:
-                        knowledge['label'] = knowledge['long-label']
                     self.db.execute('replace into labels values (?, ?)', (entity, knowledge['label']))
                 if 'references' in knowledge:
                     self.__update_references(entity, knowledge.get('references', []))
