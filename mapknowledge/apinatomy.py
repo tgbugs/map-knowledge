@@ -35,6 +35,8 @@ from rdflib.extras import external_graph_libs as egl
 
 from .utils import log
 
+#===============================================================================
+
 # Layers shouldn't be resolving to
 # ``spinal cord``, etc. nor to ``None``.
 # A SCKAN issue
@@ -223,24 +225,6 @@ class Apinatomy:
     next_s = 'apinatomy:next*'
     references = 'apinatomy:references'
     topology_s = 'apinatomy:topology*'
-
-    @staticmethod
-    def neurons_for_model_cypher(model_id):
-        # From https://github.com/SciCrunch/sparc-curation/blob/master/docs/queries.org#neru-model-populations
-        # See also https://github.com/SciCrunch/sparc-curation/blob/master/docs/queries.org#neru-model-populations-and-references
-        return """
-            MATCH (start:Ontology {{iri: "{MODEL_ID}"}})
-            <-[:isDefinedBy]-(external:Class)
-            -[:subClassOf*]->(:Class {{iri: "http://uri.interlex.org/tgbugs/uris/readable/NeuronEBM"}}) // FIXME
-            RETURN external
-        """.format(MODEL_ID=model_id)
-
-    @staticmethod
-    def phenotype_for_neuron_cypher(neuron_id):
-        # From https://github.com/SciCrunch/sparc-curation/blob/master/docs/queries.org#phenotypes-for-neuron
-        return """
-            MATCH (neupop:Class{{iri: "{NEURON_ID}"}})-[e:ilxtr:hasPhenotype!]->(phenotype) RETURN e
-        """.format(NEURON_ID=neuron_id)
 
     @staticmethod
     def deblob(blob, remove_converge=False):
@@ -562,6 +546,20 @@ class Apinatomy:
         }
 
     #===========================================================================
+    #===========================================================================
+
+    CONNECTIVITY_ONTOLOGIES = [ 'ilxtr' ]
+    APINATOMY_MODEL_PREFIX = 'https://apinatomy.org/uris/models/'
+
+    #===========================================================================
+    @staticmethod
+    def phenotype_for_neuron_cypher(neuron_id):
+        # From https://github.com/SciCrunch/sparc-curation/blob/master/docs/queries.org#phenotypes-for-neuron
+        return """
+            MATCH (neupop:Class{{iri: "{NEURON_ID}"}})-[e:ilxtr:hasPhenotype!]->(phenotype) RETURN e
+        """.format(NEURON_ID=neuron_id)
+
+    #===========================================================================
 
     @staticmethod
     def neuron_knowledge(neuron, data):
@@ -592,18 +590,24 @@ class Apinatomy:
     @staticmethod
     def model_knowledge(model, data):
     #================================
-        # Process result of ``neurons_for_model_cypher(model_id)``
+        # Process result of ``SCICRUNCH_MODEL_REFERENCES`` query
         knowledge = {
             'id': model,
             'paths': []
         }
+        references = set()
         for node in data['nodes']:
-            if 'Class' in node.get('meta', {}).get('types', []):
-                path_id = node['id']
-                knowledge['paths'].append({
-                    'id': path_id,
-                    'models': path_id
-                })
+            node_id = node['id']
+            if 'Class' in (types := node.get('meta', {}).get('types', [])):
+                ontology = node_id.split(':')[0]
+                if ontology in Apinatomy.CONNECTIVITY_ONTOLOGIES:
+                    knowledge['paths'].append({
+                        'id': node_id,
+                        'models': node_id
+                    })
+            elif 'NamedIndividual' in types:
+                references.add(node_id)
+        knowledge['references'] = list(references)
         return knowledge
 
     @staticmethod

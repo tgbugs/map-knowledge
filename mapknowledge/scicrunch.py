@@ -19,6 +19,7 @@
 #===============================================================================
 
 import os
+import urllib.parse
 
 #===============================================================================
 
@@ -29,10 +30,6 @@ from .utils import request_json
 #===============================================================================
 
 INTERLEX_ONTOLOGIES = ['ILX', 'NLX']
-
-CONNECTIVITY_ONTOLOGIES = [ 'ilxtr' ]
-
-APINATOMY_MODEL_PREFIX = 'https://apinatomy.org/uris/models/'
 
 #===============================================================================
 
@@ -58,6 +55,7 @@ SCICRUNCH_SPARC_VOCAB = f'{SCICRUNCH_SPARC_API}/vocabulary/id/{{TERM}}.json'
 SCICRUNCH_SPARC_APINATOMY = f'{SCICRUNCH_SPARC_API}/dynamic/demos/apinat'
 SCICRUNCH_CONNECTIVITY_MODELS = f'{SCICRUNCH_SPARC_APINATOMY}/modelList.json'
 SCICRUNCH_CONNECTIVITY_NEURONS = f'{SCICRUNCH_SPARC_APINATOMY}/{CONNECTIVITY_QUERY}/{{NEURON_ID}}.json'
+SCICRUNCH_MODEL_REFERENCES = f'{SCICRUNCH_SPARC_APINATOMY}/modelPopulationsReferences/{{MODEL_ID}}.json'
 
 #===============================================================================
 
@@ -132,17 +130,17 @@ class SciCrunch(object):
                                     params=params)
                 if data is not None:
                     knowledge['label'] = data.get('data', {}).get('label', entity)
-            elif ontology in CONNECTIVITY_ONTOLOGIES:
+            elif ontology in Apinatomy.CONNECTIVITY_ONTOLOGIES:
                 data = request_json(SCICRUNCH_CONNECTIVITY_NEURONS.format(API_ENDPOINT=self.__api_endpoint,
                                                                           SCICRUNCH_RELEASE=self.__scicrunch_release,
                                                                           NEURON_ID=entity),
                                     params=params)
                 if data is not None:
                     knowledge = Apinatomy.neuron_knowledge(entity, data)
-            elif entity.startswith(APINATOMY_MODEL_PREFIX):
-                params['cypherQuery'] = Apinatomy.neurons_for_model_cypher(entity)
-                data = request_json(SCICRUNCH_SPARC_CYPHER.format(API_ENDPOINT=self.__api_endpoint,
-                                                                  SCICRUNCH_RELEASE=self.__scicrunch_release),
+            elif entity.startswith(Apinatomy.APINATOMY_MODEL_PREFIX):
+                data = request_json(SCICRUNCH_MODEL_REFERENCES.format(API_ENDPOINT=self.__api_endpoint,
+                                                                      SCICRUNCH_RELEASE=self.__scicrunch_release,
+                                                                      MODEL_ID=urllib.parse.quote(entity, '')),
                                     params=params)
                 if data is not None:
                     knowledge = Apinatomy.model_knowledge(entity, data)
