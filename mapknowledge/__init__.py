@@ -31,7 +31,7 @@ from pathlib import Path
 
 #===============================================================================
 
-from .scicrunch import APINATOMY_MODEL_PREFIX, CONNECTIVITY_ONTOLOGIES
+from .apinatomy import Apinatomy
 from .scicrunch import SCICRUNCH_API_ENDPOINT, SCICRUNCH_PRODUCTION, SCICRUNCH_STAGING
 from .scicrunch import SciCrunch
 from .utils import log
@@ -147,8 +147,8 @@ class KnowledgeStore(KnowledgeBase):
         # Optionally clear local connectivity knowledge from SciCrunch
         if (self.db is not None and clean_connectivity):
             log.info(f'Clearing connectivity knowledge...')
-            entities = [f'{APINATOMY_MODEL_PREFIX}%']
-            entities.extend([f'{ontology}:%' for ontology in CONNECTIVITY_ONTOLOGIES])
+            entities = [f'{Apinatomy.APINATOMY_MODEL_PREFIX}%']
+            entities.extend([f'{ontology}:%' for ontology in Apinatomy.CONNECTIVITY_ONTOLOGIES])
             condition = ' or '.join(len(entities)*['entity like ?'])
             self.db.execute('begin')
             self.db.execute(f'delete from knowledge where {condition}', tuple(entities))
