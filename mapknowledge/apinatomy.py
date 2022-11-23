@@ -216,6 +216,8 @@ class Apinatomy:
     endsIn = 'apinatomy:endsIn'
     ontologyTerms = 'apinatomy:ontologyTerms'
     fasciculatesIn = 'apinatomy:fasciculatesIn'
+    inheritedOntologyTerms = 'apinatomy:inheritedOntologyTerms'
+    inheritedOntologyTerms_s = 'apinatomy:inheritedOntologyTerms*'
     inheritedExternal = 'apinatomy:inheritedExternal'
     inheritedExternal_s = 'apinatomy:inheritedExternal*'
     internalIn = 'apinatomy:internalIn'
@@ -227,7 +229,20 @@ class Apinatomy:
     topology_s = 'apinatomy:topology*'
 
     @staticmethod
+    def getiot(blob):
+        # ie and iot are mutually exclusive
+        for e in blob['edges']:
+            if e['pred'] in (Apinatomy.inheritedExternal, Apinatomy.inheritedOntologyTerms):
+                return e['pred']
+
+    @staticmethod
     def deblob(blob, remove_converge=False):
+        iot_predicate = Apinatomy.getiot(blob)
+        if iot_predicate == Apinatomy.inheritedOntologyTerms:
+            iot_predicate_s = Apinatomy.inheritedOntologyTerms_s
+        else:
+            iot_predicate_s = Apinatomy.inheritedExternal_s
+
         # FIXME I think we may be over or under simplifying just a bit
         # somehow getting double links at the end of the chain
 
@@ -250,8 +265,8 @@ class Apinatomy:
              ['apinatomy:conveyingLyph', 'apinatomy:topology'],
              ['apinatomy:conveys', 'apinatomy:source', 'apinatomy:sourceOf'],
              ['apinatomy:conveys', 'apinatomy:target', 'apinatomy:sourceOf'],
-             ['apinatomy:cloneOf', 'apinatomy:inheritedExternal'],
-             ['apinatomy:conveyingLyph', 'apinatomy:inheritedExternal'],],
+             ['apinatomy:cloneOf', iot_predicate],
+             ['apinatomy:conveyingLyph', iot_predicate],],
             blob)
         edges = blob['edges']
         nindex = {n['id']:n for n in blob['nodes']}  # FIXME silent errors ;_;
@@ -266,9 +281,9 @@ class Apinatomy:
             if e['pred'] == 'apinatomy:conveyingLyph-apinatomy:topology':
                 e['pred'] = 'apinatomy:topology*'
             if e['pred'] in (
-                    'apinatomy:conveyingLyph-apinatomy:inheritedExternal',
-                    'apinatomy:cloneOf-apinatomy:inheritedExternal',):
-                e['pred'] = 'apinatomy:inheritedExternal*'
+                    f'apinatomy:conveyingLyph-{iot_predicate}',
+                    f'apinatomy:cloneOf-{iot_predicate}',):
+                e['pred'] = iot_predicate_s
             if nifstd.pred(e, Apinatomy.topology_s):
                 # move topology to be a property not a node to make the layout cleaner
                 nindex[nifstd.sub(e)]['topology'] = nifstd.obj(e)
@@ -306,6 +321,12 @@ class Apinatomy:
     @staticmethod
     def reclr(blob, start_link):
         # recurse up the hierarchy until fasIn endIn intIn terminates
+        iot_predicate = Apinatomy.getiot(blob)
+        if iot_predicate == Apinatomy.inheritedOntologyTerms:
+            iot_predicate_s = Apinatomy.inheritedOntologyTerms_s
+        else:
+            iot_predicate_s = Apinatomy.inheritedExternal_s
+
         collect = []
         layer = []
         col = True
@@ -318,8 +339,8 @@ class Apinatomy:
                     log.warning(f'should not have hit a cloneOf case {e}')
                     return nifstd.ematch(blob, select_ext, nifstd.obj(e))
                 if (nifstd.pred(e, Apinatomy.ontologyTerms)
-                 or nifstd.pred(e, Apinatomy.inheritedExternal)
-                 or nifstd.pred(e, Apinatomy.inheritedExternal_s)):
+                 or nifstd.pred(e, iot_predicate)
+                 or nifstd.pred(e, iot_predicate_s)):
                     external = nifstd.obj(e)
                     if col:
                         if layer:
@@ -358,6 +379,12 @@ class Apinatomy:
 
     @staticmethod
     def layer_regions(blob, start):
+        iot_predicate = Apinatomy.getiot(blob)
+        if iot_predicate == Apinatomy.inheritedOntologyTerms:
+            iot_predicate_s = Apinatomy.inheritedOntologyTerms_s
+        else:
+            iot_predicate_s = Apinatomy.inheritedExternal_s
+
         direct = [nifstd.obj(t) for t in
                   nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
                                     and (nifstd.pred(e, Apinatomy.internalIn)
@@ -367,8 +394,8 @@ class Apinatomy:
         layers = [nifstd.obj(t) for d in direct for t in
                   nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
                                     and Apinatomy.isLayer(blob, m)
-                                    and (nifstd.pred(e, Apinatomy.inheritedExternal)
-                                      or nifstd.pred(e, Apinatomy.inheritedExternal_s)
+                                    and (nifstd.pred(e, iot_predicate)
+                                      or nifstd.pred(e, iot_predicate_s)
                                       or nifstd.pred(e, Apinatomy.ontologyTerms))),
                              d)]
         layers = [l for l in layers if l not in EXCLUDED_LAYERS]  # XXX temp fix
@@ -381,15 +408,15 @@ class Apinatomy:
             lregs = [nifstd.obj(t) for d in ldir for t in
                      nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
                                        and not Apinatomy.isLayer(blob, m)
-                                       and (nifstd.pred(e, Apinatomy.inheritedExternal)
-                                         or nifstd.pred(e, Apinatomy.inheritedExternal_s)
+                                       and (nifstd.pred(e, iot_predicate)
+                                         or nifstd.pred(e, iot_predicate_s)
                                          or nifstd.pred(e, Apinatomy.ontologyTerms))),
                                 d)]
         regions = [nifstd.obj(t) for d in direct for t in
                    nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
                                      and not Apinatomy.isLayer(blob, m)
-                                     and (nifstd.pred(e, Apinatomy.inheritedExternal)
-                                       or nifstd.pred(e, Apinatomy.inheritedExternal_s)
+                                     and (nifstd.pred(e, iot_predicate)
+                                       or nifstd.pred(e, iot_predicate_s)
                                        or nifstd.pred(e, Apinatomy.ontologyTerms))),
                                  d)]
 
@@ -401,8 +428,14 @@ class Apinatomy:
 
     @staticmethod
     def find_terminals(blob, type):
+        iot_predicate = Apinatomy.getiot(blob)
+        if iot_predicate == Apinatomy.inheritedOntologyTerms:
+            iot_predicate_s = Apinatomy.inheritedOntologyTerms_s
+        else:
+            iot_predicate_s = Apinatomy.inheritedExternal_s
+
         return [es for es in blob['edges']
-                if nifstd.pred(es, Apinatomy.inheritedExternal_s)
+                if nifstd.pred(es, iot_predicate_s)
                 and nifstd.obj(es, type)
                 and nifstd.ematch(blob, (lambda e, m: nifstd.sub(e, m)
                                          and nifstd.pred(e, Apinatomy.topology_s)
@@ -427,6 +460,12 @@ class Apinatomy:
 
     @staticmethod
     def find_region_layer(blob, edge, bindex):  # XXX did I just reimplement a worse reclr ???
+        iot_predicate = Apinatomy.getiot(blob)
+        if iot_predicate == Apinatomy.inheritedOntologyTerms:
+            iot_predicate_s = Apinatomy.inheritedOntologyTerms_s
+        else:
+            iot_predicate_s = Apinatomy.inheritedExternal_s
+
         collect = []
         layers = []
         layers_ies = []
@@ -435,13 +474,13 @@ class Apinatomy:
         def select_term(e, m, layers=layers):
             if nifstd.sub(e, m):
                 if (nifstd.pred(e, Apinatomy.ontologyTerms)
-                    or nifstd.pred(e, Apinatomy.inheritedExternal)
-                    or nifstd.pred(e, Apinatomy.inheritedExternal_s)):
+                    or nifstd.pred(e, iot_predicate)
+                    or nifstd.pred(e, iot_predicate_s)):
                     layer = nifstd.obj(e)
                     if layer not in donel:
                         donel.add(layer)
-                        if (nifstd.pred(e, Apinatomy.inheritedExternal)
-                            or nifstd.pred(e, Apinatomy.inheritedExternal_s)):
+                        if (nifstd.pred(e, iot_predicate)
+                            or nifstd.pred(e, iot_predicate_s)):
                             layers_ies.append(bindex[layer])
                         else:
                             layers.append(bindex[layer])
