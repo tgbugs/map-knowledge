@@ -43,6 +43,7 @@ SCICRUNCH_STAGING = 'sparc-scigraph'
 
 # NB. This may change with a new SCKAN release...
 CONNECTIVITY_QUERY = 'neru-6'
+CONNECTIVITY_QUERY_NEXT = 'neru-7'
 
 #===============================================================================
 
@@ -54,7 +55,7 @@ SCICRUNCH_SPARC_VOCAB = f'{SCICRUNCH_SPARC_API}/vocabulary/id/{{TERM}}.json'
 
 SCICRUNCH_SPARC_APINATOMY = f'{SCICRUNCH_SPARC_API}/dynamic/demos/apinat'
 SCICRUNCH_CONNECTIVITY_MODELS = f'{SCICRUNCH_SPARC_APINATOMY}/modelList.json'
-SCICRUNCH_CONNECTIVITY_NEURONS = f'{SCICRUNCH_SPARC_APINATOMY}/{CONNECTIVITY_QUERY}/{{NEURON_ID}}.json'
+SCICRUNCH_CONNECTIVITY_NEURONS = f'{SCICRUNCH_SPARC_APINATOMY}/{{CONNECTIVITY_QUERY}}/{{NEURON_ID}}.json'
 SCICRUNCH_MODEL_REFERENCES = f'{SCICRUNCH_SPARC_APINATOMY}/modelPopulationsReferences/{{MODEL_ID}}.json'
 
 #===============================================================================
@@ -90,6 +91,7 @@ class SciCrunch(object):
         self.__scicrunch_release = scicrunch_release
         self.__sparc_api_endpoint = SCICRUNCH_SPARC_API.format(API_ENDPOINT=api_endpoint,
                                                                SCICRUNCH_RELEASE=scicrunch_release)
+        self.__connectivity_query = CONNECTIVITY_QUERY if scicrunch_release == SCICRUNCH_PRODUCTION else CONNECTIVITY_QUERY_NEXT
         self.__unknown_entities = []
         self.__scicrunch_key = scicrunch_key if scicrunch_key is not None else os.environ.get('SCICRUNCH_API_KEY')
         if self.__scicrunch_key is None:
@@ -133,6 +135,7 @@ class SciCrunch(object):
             elif ontology in Apinatomy.CONNECTIVITY_ONTOLOGIES:
                 data = request_json(SCICRUNCH_CONNECTIVITY_NEURONS.format(API_ENDPOINT=self.__api_endpoint,
                                                                           SCICRUNCH_RELEASE=self.__scicrunch_release,
+                                                                          CONNECTIVITY_QUERY=self.__connectivity_query,
                                                                           NEURON_ID=entity),
                                     params=params)
                 if data is not None:
