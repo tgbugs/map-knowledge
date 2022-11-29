@@ -466,6 +466,7 @@ class Apinatomy:
         else:
             iot_predicate_s = Apinatomy.inheritedExternal_s
 
+        _nonelayer = False
         collect = []
         layers = []
         layers_ies = []
@@ -505,6 +506,7 @@ class Apinatomy:
         #pprint((collect, layers, layers_ies))
         if collect and not layers and not layers_ies:
             layers = [None]
+            _nonelayer = True
         elif layers_ies and not layers:
             layers = layers_ies
 
@@ -514,6 +516,10 @@ class Apinatomy:
         for bad in EXCLUDED_LAYERS:
             if bad in lids:
                 layers = [l for l in layers if l is None or l['id'] != bad]
+
+        # if we removed all layers because they were bad restore [None] so counts match
+        if not layers and (_nonelayer or layers_ies):
+            layers = [None]
 
         # hacked way to not have to deal with layers also matching as regions
         # just remove them from regions if they are in layers ...
