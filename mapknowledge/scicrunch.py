@@ -18,7 +18,9 @@
 #
 #===============================================================================
 
+from __future__ import annotations
 import os
+from typing import Optional
 import urllib.parse
 
 #===============================================================================
@@ -162,8 +164,8 @@ class SciCrunch(object):
             self.__unknown_entities.append(entity)
         return knowledge
 
-    def get_phenotypes(self, entity: str) -> list:
-    #=============================================
+    def get_phenotypes(self, entity: str) -> Optional[list]:
+    #=======================================================
         phenotypes = None
         if self.__scicrunch_key is not None:
             params = {
