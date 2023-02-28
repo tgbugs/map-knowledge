@@ -44,7 +44,7 @@ SCICRUNCH_PRODUCTION = 'sckan-scigraph'
 SCICRUNCH_STAGING = 'sparc-scigraph'
 
 # NB. This may change with a new SCKAN release...
-CONNECTIVITY_QUERY = 'neru-6'
+CONNECTIVITY_QUERY = 'neru-7'
 CONNECTIVITY_QUERY_NEXT = 'neru-7'
 
 #===============================================================================
