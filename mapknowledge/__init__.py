@@ -72,9 +72,11 @@ class KnowledgeBase(object):
             # Create store directory if it doesn't exist
             if not os.path.exists(store_directory):
                 os.makedirs(store_directory)
-            # Create knowledge base if it doesn't exist
+            # Create knowledge base if it doesn't exist and we are allowed to
             self.__db_name = Path(store_directory, knowledge_base).resolve()
-            if create and not self.__db_name.exists():
+            if not self.__db_name.exists():
+                if not create:
+                    raise IOError(f'Missing KnowledgeBase: {self.__db_name}')
                 db = sqlite3.connect(self.__db_name,
                     detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
                 db.executescript(KNOWLEDGE_SCHEMA)
