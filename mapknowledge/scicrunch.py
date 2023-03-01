@@ -62,10 +62,13 @@ SCICRUNCH_MODEL_REFERENCES = f'{SCICRUNCH_SPARC_APINATOMY}/modelPopulationsRefer
 
 #===============================================================================
 
-## SCKAN version via:
-##<https://cassava.ucsd.edu/sparc/ontologies/N:organization:618e8dd9-f8d2-4dc4-9abb-c6aaab2e78a0> owl:versionInfo ?o
-## from: https://nih-sparc.slack.com/archives/C0261A0L5LJ/p1648163640808399?thread_ts=1648066897.791529&cid=C0261A0L5LJ
-##
+SCICRUNCH_VERSION_QUERY = 'match (o:Ontology {iri: "http://uri.interlex.org/sparc/ontologies/ilx_0793177"}) return o'
+
+SCKAN_VERSION_IRI = 'ilx:sparc/ontologies/ilx_0793177'
+OWL_VERSIONINFO = 'http://www.w3.org/2002/07/owl#versionInfo'
+
+#===============================================================================
+
 class NAMESPACES:
     namespaces = {
         'ilxtr': 'http://uri.interlex.org/tgbugs/uris/readable/'
@@ -102,6 +105,16 @@ class SciCrunch(object):
     @property
     def sparc_api_endpoint(self):
         return self.__sparc_api_endpoint
+
+    def release_timestamp(self):
+    #===========================
+        data = self.query(SCICRUNCH_VERSION_QUERY)
+        if data is not None:
+            for node in data['nodes']:
+                if node['id'] == SCKAN_VERSION_IRI:
+                    version_info = node['meta'].get(OWL_VERSIONINFO)
+                    if len(version_info):
+                        return version_info[0]
     def connectivity_models(self):
     #=============================
         models = {}
