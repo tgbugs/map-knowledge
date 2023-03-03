@@ -23,7 +23,6 @@ __version__ = "0.12.1"
 #===============================================================================
 
 import sqlite3
-import datetime
 import json
 import os
 
