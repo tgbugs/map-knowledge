@@ -210,12 +210,13 @@ class KnowledgeStore(KnowledgeBase):
             row = self.db.execute('select knowledge from knowledge where entity=?', (entity,)).fetchone()
             if row is not None:
                 knowledge = json.loads(row[0])
-        if len(knowledge) == 0 and self.__scicrunch is not None:
+        if (self.__scicrunch is not None
+         and (len(knowledge) == 0 or entity == knowledge.get('label', entity))):
             # Consult SciCrunch if we don't know about the entity
             knowledge = self.__scicrunch.get_knowledge(entity)
             if 'connectivity' in knowledge:
-                phenotypes = self.__scicrunch.get_phenotypes(entity)
-                if len(phenotypes) > 0:
+                if ((phenotypes := self.__scicrunch.get_phenotypes(entity)) is not None
+                 and len(phenotypes) > 0):
                     knowledge['phenotypes'] = phenotypes
                 # Make sure we have labels for each entity used for connectivity
                 connectivity_terms = set()

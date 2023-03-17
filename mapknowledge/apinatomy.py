@@ -609,15 +609,16 @@ class Apinatomy:
     @staticmethod
     def neuron_knowledge(neuron, data):
     #==================================
-        knowledge = {
-            'id': neuron,
-            'label': neuron
-        }
+        knowledge = {}
         for node in data['nodes']:
             if node.get('id') == neuron:
+                knowledge['id'] = neuron
                 knowledge['label'] = node['meta'].get('synonym', [neuron])[0]
                 knowledge['long-label'] = node['lbl']
                 break
+        if len(knowledge) == 0:
+            # We don't know the neuron
+            return {}
         apinatomy_neuron = None
         for edge in data['edges']:
             if nifstd.sub(edge, neuron) and nifstd.pred(edge, Apinatomy.annotates):
