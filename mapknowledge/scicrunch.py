@@ -57,7 +57,7 @@ SCICRUNCH_SPARC_CYPHER = f'{SCICRUNCH_SPARC_API}/cypher/execute.json'
 SCICRUNCH_SPARC_VOCAB = f'{SCICRUNCH_SPARC_API}/vocabulary/id/{{TERM}}.json'
 
 SCICRUNCH_SPARC_APINATOMY = f'{SCICRUNCH_SPARC_API}/dynamic/demos/apinat'
-SCICRUNCH_CONNECTIVITY_MODELS = f'{SCICRUNCH_SPARC_APINATOMY}/modelList.json'
+SCICRUNCH_MODELS_WITH_VERSION = f'{SCICRUNCH_SPARC_APINATOMY}/graphList.json'
 SCICRUNCH_CONNECTIVITY_NEURONS = f'{SCICRUNCH_SPARC_APINATOMY}/{{CONNECTIVITY_QUERY}}/{{NEURON_ID}}.json'
 SCICRUNCH_MODEL_REFERENCES = f'{SCICRUNCH_SPARC_APINATOMY}/modelPopulationsReferences/{{MODEL_ID}}.json'
 
@@ -145,12 +145,20 @@ class SciCrunch(object):
                 'api_key': self.__scicrunch_key,
                 'limit': 9999,
             }
-            data = request_json(SCICRUNCH_CONNECTIVITY_MODELS.format(API_ENDPOINT=self.__api_endpoint,
+            data = request_json(SCICRUNCH_MODELS_WITH_VERSION.format(API_ENDPOINT=self.__api_endpoint,
                                                                      SCICRUNCH_RELEASE=self.__scicrunch_release),
                                 params=params)
             if data is not None:
+                local_to_uri = {
+                    edge['obj']: edge['sub']
+                        for edge in data['edges']
+                            if edge['pred'] == 'apinatomy:hasGraph'}
                 for node in data.get('nodes', []):
-                    models[node['id']] = node['lbl']
+                    if (version := node['meta'].get(NAMESPACES.uri('apinatomy:version'))) is not None:
+                        models[local_to_uri[node['id']]] = {
+                            'label': node['lbl'],
+                            'version': version[0],
+                            }
         return models
 
     def get_knowledge(self, entity: str) -> dict:

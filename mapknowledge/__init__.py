@@ -57,14 +57,19 @@ KNOWLEDGE_SCHEMA = f"""
     create index publications_entity_index on publications(entity);
     create index publications_publication_index on publications(publication);
 
-    create table connectivity_models (model text primary key);
+    create table connectivity_models (model text primary key, version text);
 
     insert into metadata (name, value) values ('schema_version', '{SCHEMA_VERSION}');
     commit;
 """
 
 SCHEMA_UPGRADES = {
-
+    None: ('1.1', """
+        begin;
+        alter table connectivity_models add version text;
+        insert or replace into metadata (name, value) values ('schema_version', '1.1');
+        commit;
+    """)
 }
 
 #===============================================================================
@@ -88,7 +93,6 @@ class KnowledgeBase(object):
                     detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
                 db.executescript(KNOWLEDGE_SCHEMA)
                 db.close()
-            ## What about upgrading when tables (e.g. knowledge) don't exist???
             self.open(read_only=read_only)
 
     @property
@@ -165,7 +169,7 @@ class KnowledgeStore(KnowledgeBase):
             self.__scicrunch = None
             scicrunch_msg = 'not using SCKAN'
         log.info(f'Map Knowledge version {__version__} {cache_msg} {scicrunch_msg}')
-        # Optionally clear local connectivity knowledge from SciCrunch
+        # Optionally clear local connectivity knowledge
         if (self.db is not None and clean_connectivity):
             log.info(f'Clearing connectivity knowledge...')
             entities = [f'{APINATOMY_MODEL_PREFIX}%']
@@ -175,7 +179,9 @@ class KnowledgeStore(KnowledgeBase):
             self.db.execute(f'delete from knowledge where {condition}', tuple(entities))
             self.db.execute(f'delete from labels where {condition}', tuple(entities))
             self.db.execute(f'delete from publications where {condition}', tuple(entities))
+            self.db.execute(f'delete from connectivity_models')
             self.db.execute('commit')
+        self.__cleaned_connectivity = clean_connectivity
 
     @property
     def scicrunch(self):
@@ -183,23 +189,30 @@ class KnowledgeStore(KnowledgeBase):
 
     def connectivity_models(self):
     #=============================
+        def cached_models():
+            return {row[0]: {'label': row[1], 'version': row[2]}
+                for row in self.db.execute('''
+                    select c.model, l.label, c.version from connectivity_models as c
+                        left join labels as l on c.model = l.entity order by model
+                    ''')} if self.db is not None else {}
+
         if self.__scicrunch is not None:
-            models = self.__scicrunch.connectivity_models()
+            sckan_models = self.__scicrunch.connectivity_models()
+            if not self.__cleaned_connectivity:
+                model_info = cached_models()
+                for model, properties in sckan_models.items():
+                    if ((cached_properties := model_info.get(model)) is not None
+                     and cached_properties['version'] != properties['version']):
+                        raise ValueError(f'Connectivity model {model} has changed in SCKAN -- please `clean connectivity`')
             if self.db is not None and not self.read_only:
                 if not self.db.in_transaction:
                     self.db.execute('begin')
-                for model, label in models.items():
-                    self.db.execute('replace into connectivity_models values (?)', (model, ))
-                    self.db.execute('replace into labels values (?, ?)', (model, label))
+                for model, properties in sckan_models.items():
+                    self.db.execute('replace into connectivity_models values (?, ?)', (model, properties['version']))
+                    self.db.execute('replace into labels values (?, ?)', (model, properties['label']))
                 self.db.commit()
-            return models
-        elif self.db is not None:
-            return {row[0]: row[1] for row in self.db.execute('''
-                select c.model, l.label from connectivity_models as c
-                    left join labels as l on c.model = l.entity order by model
-                ''')}
-        else:
-            return {}
+            return sckan_models
+        return cached_models()
 
     def labels(self):
     #================
