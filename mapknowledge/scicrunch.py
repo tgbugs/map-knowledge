@@ -25,7 +25,8 @@ import urllib.parse
 
 #===============================================================================
 
-from .apinatomy import Apinatomy
+from .apinatomy import Apinatomy, CONNECTIVITY_ONTOLOGIES, APINATOMY_MODEL_PREFIX
+from .apinatomy import PATH_METADATA_QUERY
 from .utils import log
 from .utils import request_json
 
@@ -106,6 +107,19 @@ class SciCrunch(object):
     def sparc_api_endpoint(self):
         return self.__sparc_api_endpoint
 
+    def query(self, cypher: str, **kwds) -> Optional[dict]:
+    #======================================================
+        if self.__scicrunch_key is not None:
+            params = {
+                'api_key': self.__scicrunch_key,
+                'limit': 9999,
+            }
+            params['cypherQuery'] = cypher
+            params.update(kwds)
+            return request_json(SCICRUNCH_SPARC_CYPHER.format(API_ENDPOINT=self.__api_endpoint,
+                                                              SCICRUNCH_RELEASE=self.__scicrunch_release),
+                                params=params)
+
     def release_timestamp(self):
     #===========================
         data = self.query(SCICRUNCH_VERSION_QUERY)
@@ -147,7 +161,7 @@ class SciCrunch(object):
                                     params=params)
                 if data is not None:
                     knowledge['label'] = data.get('data', {}).get('label', entity)
-            elif ontology in Apinatomy.CONNECTIVITY_ONTOLOGIES:
+            elif ontology in CONNECTIVITY_ONTOLOGIES:
                 data = request_json(SCICRUNCH_CONNECTIVITY_NEURONS.format(API_ENDPOINT=self.__api_endpoint,
                                                                           SCICRUNCH_RELEASE=self.__scicrunch_release,
                                                                           CONNECTIVITY_QUERY=self.__connectivity_query,
@@ -155,7 +169,7 @@ class SciCrunch(object):
                                     params=params)
                 if data is not None:
                     knowledge = Apinatomy.neuron_knowledge(entity, data)
-            elif entity.startswith(Apinatomy.APINATOMY_MODEL_PREFIX):
+            elif entity.startswith(APINATOMY_MODEL_PREFIX):
                 data = request_json(SCICRUNCH_MODEL_REFERENCES.format(API_ENDPOINT=self.__api_endpoint,
                                                                       SCICRUNCH_RELEASE=self.__scicrunch_release,
                                                                       MODEL_ID=urllib.parse.quote(entity, '')),
@@ -177,24 +191,13 @@ class SciCrunch(object):
             self.__unknown_entities.append(entity)
         return knowledge
 
-    def get_phenotypes(self, entity: str) -> Optional[list]:
-    #=======================================================
-        phenotypes = None
-        if self.__scicrunch_key is not None:
-            params = {
-                'api_key': self.__scicrunch_key,
-                'limit': 9999,
-            }
-            params['cypherQuery'] = Apinatomy.phenotype_for_neuron_cypher(NAMESPACES.uri(entity))
-            data = request_json(SCICRUNCH_SPARC_CYPHER.format(API_ENDPOINT=self.__api_endpoint,
-                                                              SCICRUNCH_RELEASE=self.__scicrunch_release),
-                                params=params)
-            if data is not None:
-                phenotypes = Apinatomy.phenotypes(data)
-        if phenotypes is None and entity not in self.__unknown_entities:
+    def connectivity_metadata(self, entity: str) -> dict[str, str|list[str]]:
+    #========================================================================
+        if (data := self.query(PATH_METADATA_QUERY, neuron_id=entity)) is not None:
+            return Apinatomy.get_metadata(data)
+        elif entity not in self.__unknown_entities:
             log.warning('Unknown anatomical entity: {}'.format(entity))
             self.__unknown_entities.append(entity)
-            phenotypes = []
-        return phenotypes
+        return {}
 
 #===============================================================================

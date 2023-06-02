@@ -55,6 +55,38 @@ EXCLUDED_LAYERS = (
 
 #===============================================================================
 
+CONNECTIVITY_ONTOLOGIES = [ 'ilxtr' ]
+APINATOMY_MODEL_PREFIX = 'https://apinatomy.org/uris/models/'
+
+#===============================================================================
+
+# Based on https://github.com/SciCrunch/sparc-curation/blob/master/docs/queries.org#phenotypes-for-neuron
+# and https://github.com/SciCrunch/sparc-curation/blob/master/docs/queries.org#npo-species
+PATH_METADATA_QUERY = '''
+    MATCH (neupop:Class{iri: $neuron_id})
+          -[dimension:ilxtr:hasInstanceInSpecies|ilxtr:hasPhenotype!]->()
+    WHERE NOT EXISTS(dimension.owlType) OR dimension.owlType = "subClassOf" OR dimension.owlType = "operand"
+    RETURN dimension
+'''
+
+PHENOTYPE_PREDICATES = [
+    'ilxtr:hasPhenotype',
+    'ilxtr:hasMolecularPhenotype',
+    'ilxtr:hasProjectionPhenotype',
+    'ilxtr:hasCircuitRolePhenotype',
+    'ilxtr:hasFunctionalCircuitRolePhenotype',]
+
+TAXON_PREDICATE = 'ilxtr:hasInstanceInTaxon'
+
+"""
+TAXON ANNOTATION:
+
+Ardell:  all neuron populations are annotated with “mammalia”
+Keast:  all neuron populations are annotated with “Rattus norvegicus” txid:10116 (or general rat is txid:10114)
+Next step would be species information for neuron populations
+"""
+
+#===============================================================================
 class PyOntUtilsEdge(tuple):
     """ Expansion of curies must happen before construction if it is going to
         happen at all. The expansion rule must be known beforehand. """
@@ -591,20 +623,6 @@ class Apinatomy:
         }
 
     #===========================================================================
-    #===========================================================================
-
-    CONNECTIVITY_ONTOLOGIES = [ 'ilxtr' ]
-    APINATOMY_MODEL_PREFIX = 'https://apinatomy.org/uris/models/'
-
-    #===========================================================================
-    @staticmethod
-    def phenotype_for_neuron_cypher(neuron_id):
-        # From https://github.com/SciCrunch/sparc-curation/blob/master/docs/queries.org#phenotypes-for-neuron
-        return """
-            MATCH (neupop:Class{{iri: "{NEURON_ID}"}})-[e:ilxtr:hasPhenotype!]->(phenotype) RETURN e
-        """.format(NEURON_ID=neuron_id)
-
-    #===========================================================================
 
     @staticmethod
     def neuron_knowledge(neuron, data):
@@ -646,7 +664,7 @@ class Apinatomy:
             node_id = node['id']
             if 'Class' in (types := node.get('meta', {}).get('types', [])):
                 ontology = node_id.split(':')[0]
-                if ontology in Apinatomy.CONNECTIVITY_ONTOLOGIES:
+                if ontology in CONNECTIVITY_ONTOLOGIES:
                     knowledge['paths'].append({
                         'id': node_id,
                         'models': node_id
@@ -657,17 +675,17 @@ class Apinatomy:
         return knowledge
 
     @staticmethod
-    def phenotypes(data):
-    #====================
-        phenotypes = []
+    def get_metadata(data: dict) -> dict[str, str|list[str]]:
+    #========================================================
+        phenotypes: list[str] = []
+        metadata = {}
         for edge in data['edges']:
-            if edge.get('pred') in [
-                    'ilxtr:hasPhenotype',
-                    'ilxtr:hasMolecularPhenotype',
-                    'ilxtr:hasProjectionPhenotype',
-                    'ilxtr:hasCircuitRolePhenotype',
-                    'ilxtr:hasFunctionalCircuitRolePhenotype',]:
+            predicate = edge.get('pred')
+            if predicate in PHENOTYPE_PREDICATES:
                 phenotypes.append(edge.get('obj'))
-        return phenotypes
+            elif predicate == TAXON_PREDICATE:
+                metadata['taxon'] = edge.get('obj')
+        metadata['phenotypes'] = phenotypes
+        return metadata
 
 #===============================================================================

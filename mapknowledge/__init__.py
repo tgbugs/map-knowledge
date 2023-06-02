@@ -30,7 +30,7 @@ from pathlib import Path
 
 #===============================================================================
 
-from .apinatomy import Apinatomy
+from .apinatomy import CONNECTIVITY_ONTOLOGIES, APINATOMY_MODEL_PREFIX
 from .scicrunch import SCICRUNCH_API_ENDPOINT, SCICRUNCH_PRODUCTION, SCICRUNCH_STAGING
 from .scicrunch import SciCrunch
 from .utils import log
@@ -148,8 +148,8 @@ class KnowledgeStore(KnowledgeBase):
         # Optionally clear local connectivity knowledge from SciCrunch
         if (self.db is not None and clean_connectivity):
             log.info(f'Clearing connectivity knowledge...')
-            entities = [f'{Apinatomy.APINATOMY_MODEL_PREFIX}%']
-            entities.extend([f'{ontology}:%' for ontology in Apinatomy.CONNECTIVITY_ONTOLOGIES])
+            entities = [f'{APINATOMY_MODEL_PREFIX}%']
+            entities.extend([f'{ontology}:%' for ontology in CONNECTIVITY_ONTOLOGIES])
             condition = ' or '.join(len(entities)*['entity like ?'])
             self.db.execute('begin')
             self.db.execute(f'delete from knowledge where {condition}', tuple(entities))
@@ -215,9 +215,8 @@ class KnowledgeStore(KnowledgeBase):
             # Consult SciCrunch if we don't know about the entity
             knowledge = self.__scicrunch.get_knowledge(entity)
             if 'connectivity' in knowledge:
-                if ((phenotypes := self.__scicrunch.get_phenotypes(entity)) is not None
-                 and len(phenotypes) > 0):
-                    knowledge['phenotypes'] = phenotypes
+                # Get phenotype, taxon, and other metadate
+                knowledge.update(self.__scicrunch.connectivity_metadata(entity))
                 # Make sure we have labels for each entity used for connectivity
                 connectivity_terms = set()
                 for (node0, node1) in knowledge['connectivity']:
