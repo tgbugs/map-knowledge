@@ -130,15 +130,17 @@ class KnowledgeBase(object):
                         self.__db.executescript(upgrade[1])
 
     def metadata(self, name):
-        row = self.__db.execute('select value from metadata where name=?', (name,)).fetchone()
-        if row is not None:
-            return row[0]
+        if self.__db is not None:
+            row = self.__db.execute('select value from metadata where name=?', (name,)).fetchone()
+            if row is not None:
+                return row[0]
 
     def set_metadata(self, name, value):
-        if not self.__db.in_transaction:
-            self.__db.execute('begin')
-        self.db.execute('replace into metadata values (?, ?)', (name,value))
-        self.__db.execute('commit')
+        if self.__db is not None:
+            if not self.__db.in_transaction:
+                self.__db.execute('begin')
+            self.__db.execute('replace into metadata values (?, ?)', (name,value))
+            self.__db.execute('commit')
 
 #===============================================================================
 
