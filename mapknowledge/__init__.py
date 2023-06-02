@@ -139,11 +139,12 @@ class KnowledgeStore(KnowledgeBase):
             self.__scicrunch = SciCrunch(api_endpoint=scicrunch_api,
                                          scicrunch_release=scicrunch_release,
                                          scicrunch_key=scicrunch_key)
+            built = f" built at {build['released']}" if (build := self.__scicrunch.sckan_build()) is not None else ''
             release = 'production' if scicrunch_release == SCICRUNCH_PRODUCTION else 'staging'
-            scicrunch_msg = f'using {release} SciCrunch at {self.__scicrunch.sparc_api_endpoint}'
+            scicrunch_msg = f"using {release} SCKAN{built} from {self.__scicrunch.sparc_api_endpoint}"
         else:
             self.__scicrunch = None
-            scicrunch_msg = 'not using SciCrunch'
+            scicrunch_msg = 'not using SCKAN'
         log.info(f'Map Knowledge version {__version__} {cache_msg} {scicrunch_msg}')
         # Optionally clear local connectivity knowledge from SciCrunch
         if (self.db is not None and clean_connectivity):

@@ -63,16 +63,11 @@ SCICRUNCH_MODEL_REFERENCES = f'{SCICRUNCH_SPARC_APINATOMY}/modelPopulationsRefer
 
 #===============================================================================
 
-SCICRUNCH_VERSION_QUERY = 'match (o:Ontology {iri: "http://uri.interlex.org/sparc/ontologies/ilx_0793177"}) return o'
-
-SCKAN_VERSION_IRI = 'ilx:sparc/ontologies/ilx_0793177'
-OWL_VERSIONINFO = 'http://www.w3.org/2002/07/owl#versionInfo'
-
-#===============================================================================
-
 class NAMESPACES:
     namespaces = {
-        'ilxtr': 'http://uri.interlex.org/tgbugs/uris/readable/'
+        'apinatomy': 'https://apinatomy.org/uris/readable/',
+        'ilx': 'http://uri.interlex.org/',
+        'ilxtr': 'http://uri.interlex.org/tgbugs/uris/readable/',
     }
 
     @staticmethod
@@ -88,6 +83,14 @@ class NAMESPACES:
             if uri.startswith(ns_uri):
                 return f'{prefix}:{uri[len(ns_uri):]}'
         return uri
+
+#===============================================================================
+
+# See https://nih-sparc.slack.com/archives/C0261A0L5LJ/p1685468238280209
+SCKAN_BUILD_QUERY = 'MATCH (p)-[i:build:id]-(), (p)-[e]-() RETURN i, e'
+
+SCKAN_RELEASE_URL = 'https://github.com/SciCrunch/NIF-Ontology/releases/tag/sckan-{RELEASE_DATE}'
+SCKAN_RELEASE_NOTES = 'https://github.com/SciCrunch/sparc-curation/blob/master/docs/sckan/CHANGELOG.org#{RELEASE_DATE}'
 
 #===============================================================================
 
@@ -120,15 +123,20 @@ class SciCrunch(object):
                                                               SCICRUNCH_RELEASE=self.__scicrunch_release),
                                 params=params)
 
-    def release_timestamp(self):
-    #===========================
-        data = self.query(SCICRUNCH_VERSION_QUERY)
+    def sckan_build(self):
+    #=====================
+        data = self.query(SCKAN_BUILD_QUERY)
         if data is not None:
             for node in data['nodes']:
-                if node['id'] == SCKAN_VERSION_IRI:
-                    version_info = node['meta'].get(OWL_VERSIONINFO)
-                    if len(version_info):
-                        return version_info[0]
+                if node['id'] == 'build:prov':
+                    release_date = node['meta'].get(NAMESPACES.uri('ilxtr:build/date'))[0]
+                    return {
+                        'created': node['meta'].get(NAMESPACES.uri('ilxtr:build/datetime'))[0],
+                        'released': release_date,
+                        'release': SCKAN_RELEASE_URL.format(RELEASE_DATE=release_date),
+                        'history': SCKAN_RELEASE_NOTES.format(RELEASE_DATE=release_date),
+                    }
+
     def connectivity_models(self):
     #=============================
         models = {}
