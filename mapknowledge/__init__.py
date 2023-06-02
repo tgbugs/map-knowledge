@@ -41,7 +41,9 @@ KNOWLEDGE_BASE = 'knowledgebase.sqlite'
 
 #===============================================================================
 
-KNOWLEDGE_SCHEMA = """
+SCHEMA_VERSION = '1.1'
+
+KNOWLEDGE_SCHEMA = f"""
     begin;
     create table metadata (name text primary key, value text);
 
@@ -56,8 +58,14 @@ KNOWLEDGE_SCHEMA = """
     create index publications_publication_index on publications(publication);
 
     create table connectivity_models (model text primary key);
+
+    insert into metadata (name, value) values ('schema_version', '{SCHEMA_VERSION}');
     commit;
 """
+
+SCHEMA_UPGRADES = {
+
+}
 
 #===============================================================================
 
@@ -102,9 +110,20 @@ class KnowledgeBase(object):
 
     def open(self, read_only=False):
         self.close()
-        db_uri = '{}?mode=ro'.format(self.__db_name.as_uri()) if read_only else self.__db_name.as_uri()
-        self.__db = sqlite3.connect(db_uri, uri=True,
-                                    detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+        if self.__db_name is not None:
+            db_uri = '{}?mode=ro'.format(self.__db_name.as_uri()) if read_only else self.__db_name.as_uri()
+            self.__db = sqlite3.connect(db_uri, uri=True,
+                                        detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+            if self.__db is not None:
+                if (schema_version := self.metadata('schema_version')) != SCHEMA_VERSION:
+                    if read_only:
+                        raise ValueError(f'Knowledge base schema requires an upgrade but opened read only...')
+                    while schema_version != SCHEMA_VERSION:
+                        if (upgrade := SCHEMA_UPGRADES.get(schema_version)) is None:
+                            raise ValueError(f'Unable to upgrade knowledge base schema from {schema_version} to version {upgrade[0]}')
+                        log.info(f'Upgrading knowledge base schema from {schema_version} to version {upgrade[0]}')
+                        schema_version = upgrade[0]
+                        self.__db.executescript(upgrade[1])
 
     def metadata(self, name):
         row = self.__db.execute('select value from metadata where name=?', (name,)).fetchone()
